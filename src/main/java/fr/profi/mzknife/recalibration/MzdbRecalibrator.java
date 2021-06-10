@@ -274,7 +274,8 @@ public class MzdbRecalibrator {
           double[] mzValues = null;
           if ((srcSpectrumHeader.getSpectrumId() >= firstScan) && (srcSpectrumHeader.getSpectrumId() <= lastScan)) {
             recalibratedScanCount++;
-            mzValues = Recalibrate.recalibrate(srcSpectrumData.getMzList(), deltaMass);
+            mzValues = RecalibrateUtil.recalibrateMasses(srcSpectrumData.getMzList(), deltaMass);
+            LOG.info(" Recalibrate spectrum {] at RT {} ", srcSpectrumHeader.getId(), srcSpectrumHeader.getTime());
           } else {
             mzValues = srcSpectrumData.getMzList();
           }

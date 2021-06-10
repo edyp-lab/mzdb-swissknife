@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>mzdb-pom</artifactId>
-        <groupId>fr.profi</groupId>
-        <version>1.0.0-SNAPSHOT</version>
+        <artifactId>profi-pom</artifactId>
+        <groupId>fr.proline</groupId>
+        <version>1.1.0-SNAPSHOT</version>
     </parent>
 
     <groupId>fr.profi</groupId>
@@ -31,14 +31,19 @@
         </dependency>
         <dependency>
             <groupId>fr.profi</groupId>
-            <artifactId>mzdb-processing_2.11</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <artifactId>mzdb-access_2.11</artifactId>
+            <version>1.1.0-SNAPSHOT</version>
         </dependency>
-
         <dependency>
         <groupId>fr.profi</groupId>
             <artifactId>mzscope</artifactId>
             <version>0.7.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
 
@@ -96,7 +101,7 @@
                             <addClasspath>true</addClasspath>
                             <classpathLayoutType>custom</classpathLayoutType>
                             <customClasspathLayout>lib/${artifact.artifactId}-${artifact.baseVersion}${dashClassifier?}.${artifact.extension}</customClasspathLayout>
-                            <mainClass>fr.profi.mzknife.recalibration.Recalibrate</mainClass>
+                            <mainClass>fr.profi.mzknife.recalibration.RecalibrateUtil</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
