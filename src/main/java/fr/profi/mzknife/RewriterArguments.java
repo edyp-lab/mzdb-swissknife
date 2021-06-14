@@ -3,6 +3,8 @@ package fr.profi.mzknife;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
+import java.util.List;
+
 public class RewriterArguments {
 
   public final static String MZDB_RECAL_COMMAND_NAME = "recalibate_mzdb";
@@ -65,11 +67,11 @@ public class RewriterArguments {
     @Parameter(names = {"-o","--output"}, description = "Filtered mgf output file", required = false, order = 1)
     String outputFileName;
 
-    @Parameter(names = {"-z","--charge"}, description = "Keep Spectrum WITH specified charge. If specified exclude-charge should not be specified.", required = false)
-    Integer keptCharge;
+    @Parameter(names = {"-z","--charges"}, description = "Keep Spectrum WITH specified charges (list with space as separator). If specified, \"exclude-charges\" should NOT be specified.", required = false,  variableArity = true)
+    List<Integer> charges2Keep;
 
-    @Parameter(names = {"-nz","--exclude-charge"}, description = "Keep Spectrum WITHOUT specified charge. If specified charge should not be specified. ", required = false)
-    Integer ignoreCharge;
+    @Parameter(names = {"-nz","--exclude-charges"}, description = "Keep Spectrum WITHOUT specified charges (mist with space as separator). If specified, \"charges\" should NOT be specified. ", required = false,  variableArity = true)
+    List<Integer> charges2Ignore;
 
     @Parameter(names = "--help", help = true)
     boolean help;

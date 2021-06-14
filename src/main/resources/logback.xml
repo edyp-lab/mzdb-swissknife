@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <contextName>mzdb-SwissKnife</contextName>
+
+  <!-- CONSOLE APPENDER -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+
+    <!-- Print "info" log messages in the console -->
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+      <level>INFO</level>
+      <onMatch>ACCEPT</onMatch>
+      <onMismatch>DENY</onMismatch>
+    </filter>
+
+    <!-- TTCCLayout -->
+    <encoder>
+      <pattern>
+        %date{dd MMM yyyy HH:mm:ss.SSS} [%thread] %-5level
+        %logger{35} - %msg%n
+      </pattern>
+    </encoder>
+  </appender>
+
+  <!-- FILE APPENDER -->
+  <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <file>mzdb-swissknife-log.txt</file>
+    <append>true</append>
+
+    <!-- TTCCLayout -->
+    <encoder>
+      <pattern>
+        %date{dd MMM yyyy HH:mm:ss.SSS} [%thread] %-5level
+        %logger{35} - %msg%n
+      </pattern>
+    </encoder>
+  </appender>
+
+  <!-- DOMAIN-DEPENDANT LOGGER LEVELS -->
+  <logger name="fr.profi" level="DEBUG" />
+  <logger name="fr.proline" level="DEBUG" />
+
+  <!-- ROOT LOGGER -->
+  <root level="WARN">
+    <appender-ref ref="STDOUT" /> <!-- Print "INFO" log messages in the console -->
+    <appender-ref ref="FILE" />   <!-- Print ALL log messages into log file -->
+  </root>
+
+</configuration>

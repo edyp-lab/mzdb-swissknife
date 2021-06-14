@@ -126,7 +126,7 @@
                                     <filtering>true</filtering>
                                     <excludes>
                                         <exclude>META-INF/**</exclude>
-                                        <exclude>native/</exclude>
+                                        <exclude>*.bat</exclude>
                                     </excludes>
                                 </resource>
                             </resources>
@@ -144,8 +144,12 @@
                             <outputDirectory>${project.build.directory}</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>src/scripts</directory>
+                                    <directory>src/main/resources</directory>
                                     <filtering>true</filtering>
+                                    <includes>
+                                        <include>**/*.bat</include>
+                                        <include>**/*.sh</include>
+                                    </includes>
                                 </resource>
                             </resources>
                         </configuration>

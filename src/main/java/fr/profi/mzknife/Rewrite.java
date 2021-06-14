@@ -13,23 +13,29 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.List;
 
 public class Rewrite {
   private final static Logger LOG = LoggerFactory.getLogger(Rewrite.class);
 
   public static void main(String[] args) {
 
-    RewriterArguments recalArgs = new RewriterArguments();
     RewriterArguments.MgfRecalibrateCommand mgfRecal = new RewriterArguments.MgfRecalibrateCommand();
     RewriterArguments.MzDBRecalibrateCommand mzdbRecal = new RewriterArguments.MzDBRecalibrateCommand();
     RewriterArguments.MgfFilterCommand mgfFilter = new RewriterArguments.MgfFilterCommand();
+
     JCommander jCmd = new JCommander();
     jCmd.addCommand(mgfRecal);
     jCmd.addCommand(mzdbRecal);
     jCmd.addCommand(mgfFilter);
+
     try {
       jCmd.parse(args);
       String parsedCmd = jCmd.getParsedCommand();
+      if(parsedCmd == null){
+        jCmd.usage();
+        System.exit(1);
+      }
       LOG.info("Running "+parsedCmd+" command ...");
 
       switch (parsedCmd){
@@ -40,7 +46,7 @@ public class Rewrite {
           String srcFilePath = mzdbRecal.inputFileName;
           File srcFile = new File(srcFilePath);
 
-          File dstFile = getDestFile(mzdbRecal.outputFileName, srcFile);
+          File dstFile = getDestFile(mzdbRecal.outputFileName, ".recal.mzdb", srcFile);
           LOG.info(" Rewrite "+srcFilePath+" to "+dstFile.getAbsolutePath());
           MzDbReader srcReader = new MzDbReader(srcFile, true);
           MzdbRecalibrator mzdbRecalibrator = new MzdbRecalibrator(srcReader, dstFile);
@@ -54,7 +60,7 @@ public class Rewrite {
 
           String mgfRecalSrcFilePath = mgfRecal.inputFileName;
           File mgfRecalSrcFile = new File(mgfRecalSrcFilePath);
-          File mgfRecalDstFile = getDestFile(mgfRecal.outputFileName, mgfRecalSrcFile);
+          File mgfRecalDstFile = getDestFile(mgfRecal.outputFileName,".recal.mgf",  mgfRecalSrcFile);
           MGFRecalibrator mgfRecalibrator = new MGFRecalibrator(mgfRecalSrcFile, mgfRecalDstFile,mgfRecal.firstTime, mgfRecal.lastTime, mgfRecal.deltaMass);
           mgfRecalibrator.rewriteMGF();
 
@@ -67,19 +73,22 @@ public class Rewrite {
           }
           String mgfFilterSrcFilePath = mgfFilter.inputFileName;
           File mgfFilterSrcFile = new File(mgfFilterSrcFilePath);
-          File mgfFilterDstFile = getDestFile(mgfFilter.outputFileName, mgfFilterSrcFile);
+          File mgfFilterDstFile = getDestFile(mgfFilter.outputFileName, ".filter.mgf", mgfFilterSrcFile);
 
-          Integer ignoreCharge = mgfFilter.ignoreCharge;
-          Integer keepCharge = mgfFilter.keptCharge;
-          if((ignoreCharge != null && keepCharge != null) ||(ignoreCharge == null && keepCharge == null)){
-            LOG.info("One, and only one, of the 2 parameters, --charge and --exclude-charge, should be specified!! ");
+          List<Integer> charges2Ignore = mgfFilter.charges2Ignore;
+          List<Integer> charges2Keep = mgfFilter.charges2Keep;
+          // If both or none of parameters charges2Ignore and charges2Keep are set : print error and exit
+          if( (charges2Ignore != null  && !charges2Ignore.isEmpty() && charges2Keep != null && !charges2Keep.isEmpty())
+                  || ( (charges2Ignore == null || charges2Ignore.isEmpty())  && (charges2Keep == null && charges2Keep.isEmpty())) ){
+            LOG.info("One, and only one, of the 2 parameters, --charges and --exclude-charges, should be specified!! ");
             System.exit(1);
           }
+
           MGFFilter filter = new MGFFilter(mgfFilterSrcFile, mgfFilterDstFile);
-          if(ignoreCharge != null) {
-            filter.setExcludeCharge(ignoreCharge);
+          if(charges2Ignore != null) {
+            filter.setExcludeCharges(charges2Ignore);
           }else{
-            filter.setCharge(keepCharge);
+            filter.setCharges(charges2Keep);
           }
           filter.rewriteMGF();
           break;
@@ -104,9 +113,9 @@ public class Rewrite {
 
   }
 
-  private static File getDestFile(String outputFile, File inputFile){
+  private static File getDestFile(String outputFile, String defaultExtension, File inputFile){
     String inputFileName = inputFile.getName();
-    String dstFilePath = (outputFile != null) ? outputFile : inputFile.getAbsolutePath().substring(0,inputFileName.lastIndexOf('.')) + ".recal.mzdb";
+    String dstFilePath = (outputFile != null) ? outputFile : inputFile.getAbsolutePath().substring(0,inputFileName.lastIndexOf('.')) + defaultExtension;
     File dstFile = new File(dstFilePath);
     if (dstFile.exists()) {
       LOG.error("Destination file {} already exists, remove it before running rewrite command", dstFile.getAbsolutePath());

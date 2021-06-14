@@ -8,11 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.List;
 
 public class MGFFilter extends MGFRewriter {
   private final static Logger LOG = LoggerFactory.getLogger(MGFFilter.class);
 
-  Integer charge;
+  List<Integer> charges;
   Boolean toExclude;
 
   public MGFFilter(File srcFile, File dstFile) throws InvalidMGFFormatException {
@@ -20,13 +21,13 @@ public class MGFFilter extends MGFRewriter {
 
   }
 
-  public void setExcludeCharge(Integer charge2Exclude){
-    charge = charge2Exclude;
+  public void setExcludeCharges(List<Integer> charges2Exclude){
+    charges = charges2Exclude;
     toExclude = true;
   }
 
-  public void setCharge(Integer charge2Keep){
-    charge = charge2Keep;
+  public void setCharges(List<Integer> charges2Keep){
+    charges = charges2Keep;
     toExclude = false;
   }
 
@@ -34,7 +35,7 @@ public class MGFFilter extends MGFRewriter {
   // Method that may be redefined in subclasses
   // default behaviour no filtering or value processing
   protected MSMSSpectrum getSpectrum2Export(MSMSSpectrum inSpectrum){
-    boolean sameCharge =charge.equals(inSpectrum.getPrecursorCharge());
+    boolean sameCharge =charges.contains(inSpectrum.getPrecursorCharge());
     if( (sameCharge && toExclude) || (!sameCharge && !toExclude)) {
       LOG.debug(" Spectrum {} is rejected.", inSpectrum.getAnnotation(MGFConstants.TITLE));
       return null;
