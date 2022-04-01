@@ -4,8 +4,6 @@ import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.MzDbMetaData;
 import fr.profi.mzdb.db.model.SpectrumMetaData;
-import fr.profi.mzdb.io.writer.MzDBWriter;
-import fr.profi.mzdb.io.writer.ParamTreeStringifier;
 import fr.profi.mzdb.model.DataEncoding;
 import fr.profi.mzdb.model.Spectrum;
 import fr.profi.mzdb.model.SpectrumHeader;
@@ -25,6 +23,7 @@ public class MzDbWriterTest {
 //private static String srcFilename = "C:\\vero\\DEV\\Proline\\mzdb\\frag\\QEx2_020038.mzdb";
 //private static String destFilename = "C:\\vero\\DEV\\Proline\\mzdb\\frag\\NewQEx2_020038.mzdb";
 
+  //VDS TODO: add assert to really add none regression test
   @Test
   public void testReadWrite(){
     MzDbReader mzDb = null;
