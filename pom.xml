@@ -7,12 +7,12 @@
     <parent>
         <artifactId>profi-pom</artifactId>
         <groupId>fr.proline</groupId>
-        <version>1.1.0-SNAPSHOT</version>
+        <version>1.2.0-SNAPSHOT</version>
     </parent>
 
     <groupId>fr.profi</groupId>
     <artifactId>mzdb-swissknife</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
@@ -31,13 +31,13 @@
         </dependency>
         <dependency>
             <groupId>fr.profi</groupId>
-            <artifactId>mzdb-access_2.11</artifactId>
-            <version>1.1.0-SNAPSHOT</version>
+            <artifactId>mzdb-access_${scala.version}</artifactId>
+            <version>1.2.0-SNAPSHOT</version>
         </dependency>
         <dependency>
         <groupId>fr.profi</groupId>
             <artifactId>mzscope</artifactId>
-            <version>0.7.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>
@@ -71,6 +71,8 @@
             <artifactId>sqlite-jdbc</artifactId>
             <!-- Version inherited from ProFI-Pom -->
         </dependency>
+
+        <!-- SQLite Jar then native libraries -->
         <dependency>
             <groupId>com.almworks.sqlite4java</groupId>
             <artifactId>sqlite4java</artifactId>
@@ -94,16 +96,15 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <!-- Version inherited from ProFI-Pom -->
                 <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                            <classpathLayoutType>custom</classpathLayoutType>
-                            <customClasspathLayout>lib/${artifact.artifactId}-${artifact.baseVersion}${dashClassifier?}.${artifact.extension}</customClasspathLayout>
-                            <mainClass>fr.profi.mzknife.recalibration.RecalibrateUtil</mainClass>
-                        </manifest>
-                    </archive>
+                    <systemProperties>
+                        <property>
+                            <name>sqlite4java.library.path</name>
+                            <value>${project.build.directory}/lib</value>
+                        </property>
+                    </systemProperties>
                 </configuration>
             </plugin>
 
@@ -222,12 +223,22 @@
 
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <excludes>
                         <exclude>**/logback.xml</exclude>
                         <exclude>**/*.conf</exclude>
                     </excludes>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathLayoutType>custom</classpathLayoutType>
+                            <!--suppress UnresolvedMavenProperty -->
+                            <customClasspathLayout>lib/${artifact.artifactId}-${artifact.baseVersion}${dashClassifier?}.${artifact.extension}</customClasspathLayout>
+                            <mainClass>fr.profi.mzknife.recalibration.RecalibrateUtil</mainClass>
+                        </manifest>
+                    </archive>
                 </configuration>
             </plugin>
 
