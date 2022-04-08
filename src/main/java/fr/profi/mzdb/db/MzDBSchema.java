@@ -1,6 +1,6 @@
 package fr.profi.mzdb.db;
 
-public class MzDbSchema {
+public class MzDBSchema {
 
   public static String getSchemaDDL() {
     StringBuilder sb = new StringBuilder();

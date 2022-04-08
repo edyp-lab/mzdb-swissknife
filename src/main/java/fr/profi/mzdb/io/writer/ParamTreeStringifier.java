@@ -1,11 +1,13 @@
 package fr.profi.mzdb.io.writer;
 
-import fr.profi.mzdb.db.model.FileContentParams;
 import fr.profi.mzdb.db.model.params.ComponentList;
+import fr.profi.mzdb.db.model.params.FileContentParams;
 import fr.profi.mzdb.db.model.params.ParamTree;
+import fr.profi.mzdb.db.model.params.ReferencableParamGroup;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import java.io.StringWriter;
 import java.io.Writer;
 
@@ -22,6 +24,7 @@ public class ParamTreeStringifier {
 	public static Marshaller paramTreeMarshaller = null;
 	public static Marshaller componentMarshaller = null;
 	public static Marshaller fileContentMarshaller = null;
+	public static Marshaller refParamGroupMarshaller = null;
 
 	synchronized public static String stringifyParamTree(ParamTree paramTree) {
 
@@ -61,6 +64,28 @@ public class ParamTreeStringifier {
 
 			Writer w = new StringWriter();
 			fileContentMarshaller.marshal(paramTree, w);
+			paramTreeAsStr = w.toString();
+			return paramTreeAsStr;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return paramTreeAsStr;
+	}
+
+	synchronized public static String stringifyRefParamGroup(ReferencableParamGroup paramGroup) {
+
+		String paramTreeAsStr ="";
+		if(paramGroup == null)
+			return paramTreeAsStr;
+
+		try {
+			if( refParamGroupMarshaller == null ) {
+				refParamGroupMarshaller = JAXBContext.newInstance(ReferencableParamGroup.class).createMarshaller();
+				refParamGroupMarshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+			}
+
+			Writer w = new StringWriter();
+			refParamGroupMarshaller.marshal(paramGroup, w);
 			paramTreeAsStr = w.toString();
 			return paramTreeAsStr;
 		} catch (Exception e) {

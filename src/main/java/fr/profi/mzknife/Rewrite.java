@@ -3,11 +3,13 @@ package fr.profi.mzknife;
 import com.almworks.sqlite4java.SQLiteException;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
+import com.beust.jcommander.ParameterException;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzknife.filter.MGFFilter;
+import fr.profi.mzknife.filter.MzDBSplitter;
 import fr.profi.mzknife.recalibration.MGFRecalibrator;
-import fr.profi.mzknife.recalibration.MzdbRecalibrator;
-//import fr.profi.mzknife.recalibration.MzdbRecalibratorTLS;
+import fr.profi.mzknife.recalibration.MzDBRecalibrator;
+//import fr.profi.mzknife.recalibration.MzDBRecalibratorTLS;
 import fr.profi.mzscope.InvalidMGFFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,11 +26,13 @@ public class Rewrite {
     RewriterArguments.MgfRecalibrateCommand mgfRecal = new RewriterArguments.MgfRecalibrateCommand();
     RewriterArguments.MzDBRecalibrateCommand mzdbRecal = new RewriterArguments.MzDBRecalibrateCommand();
     RewriterArguments.MgfFilterCommand mgfFilter = new RewriterArguments.MgfFilterCommand();
+    RewriterArguments.MzDBSplitterCommand mzDBSplitter = new RewriterArguments.MzDBSplitterCommand();
 
     JCommander jCmd = new JCommander();
     jCmd.addCommand(mgfRecal);
     jCmd.addCommand(mzdbRecal);
     jCmd.addCommand(mgfFilter);
+    jCmd.addCommand(mzDBSplitter);
 
     try {
       jCmd.parse(args);
@@ -50,7 +54,8 @@ public class Rewrite {
           File dstFile = getDestFile(mzdbRecal.outputFileName, ".recal.mzdb", srcFile);
           LOG.info(" Rewrite "+srcFilePath+" to "+dstFile.getAbsolutePath());
           MzDbReader srcReader = new MzDbReader(srcFile, true);
-          MzdbRecalibrator mzdbRecalibrator = new MzdbRecalibrator(srcReader, dstFile);
+
+          MzDBRecalibrator mzdbRecalibrator = new MzDBRecalibrator(srcReader, dstFile);
           mzdbRecalibrator.recalibrate(mzdbRecal.firstScan, mzdbRecal.lastScan, mzdbRecal.deltaMass);
 
           break;
@@ -94,12 +99,33 @@ public class Rewrite {
           filter.rewriteMGF();
           break;
 
+        case RewriterArguments.MZDB_SPLIT_COMMAND_NAME:
+          if(mzDBSplitter.help) {
+            jCmd.usage();
+            break;
+          }
+
+          String mzdbInputFileName = mzDBSplitter.inputFileName;
+          File mzdbInputFile = new File(mzdbInputFileName);
+          MzDBSplitter splitter = new MzDBSplitter(mzdbInputFile);
+          boolean splitSuccess=  splitter.splitMzDbFile();
+          if(!splitSuccess){
+            LOG.warn(" An error occured during Split. Output files may be corrupted !! ");
+          } else {
+            List<File> outFiles = splitter.getOutputMzdbFiles();
+            LOG.info(" END Splitting {} into {} files : ",  mzdbInputFileName,outFiles.size() );
+            for(File f: outFiles){
+              LOG.info(" Output File: {}",f.getName() );
+            }
+          }
+          break;
+
         default:
           LOG.warn("Invalid commande specified ");
           jCmd.usage();
       }
 
-    } catch (MissingCommandException mce) {
+    } catch (ParameterException mce ) {
       LOG.warn("Invalid command specified ");
       jCmd.usage();
     } catch (FileNotFoundException fnfe) {

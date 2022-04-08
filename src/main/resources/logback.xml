@@ -7,9 +7,8 @@
 
     <!-- Print "info" log messages in the console -->
     <filter class="ch.qos.logback.classic.filter.LevelFilter">
-      <level>INFO</level>
-      <onMatch>ACCEPT</onMatch>
-      <onMismatch>DENY</onMismatch>
+      <level>DEBUG</level>
+
     </filter>
 
     <!-- TTCCLayout -->

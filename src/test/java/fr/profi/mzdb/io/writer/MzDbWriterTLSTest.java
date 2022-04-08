@@ -162,7 +162,7 @@ public class MzDbWriterTLSTest {
 
     }
 
-    logger.info("Created MzDbMetaData.");
+    logger.info("Created MzDBMetaData.");
     MzDbMetaData metaData =  new MzDbMetaData(
             mzdbHeader,
             JavaConverters.asScalaIteratorConverter(dataEncodings.iterator()).asScala().toSeq(),

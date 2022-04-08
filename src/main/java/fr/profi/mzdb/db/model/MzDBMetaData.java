@@ -5,19 +5,20 @@ import fr.profi.mzdb.model.DataEncoding;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MzDbMetaData {
+public class MzDBMetaData {
 
   protected MzDbHeader mzdbHeader;
   protected List<DataEncoding> dataEncodings = new ArrayList<>();
   protected List<InstrumentConfiguration> instrumentConfigurations= new ArrayList<>();
-  protected fr.profi.mzdb.db.model.CommonInstrumentParams commonInstrumentParams;
+//  protected fr.profi.mzdb.db.model.CommonInstrumentParams commonInstrumentParams;
+  protected List<SharedParamTree> sharedParamTrees = new ArrayList<>();
   protected List<ProcessingMethod> processingMethods = new ArrayList<>();
   protected List<Run> runs= new ArrayList<>();
   protected List<Sample> samples= new ArrayList<>();
   protected List<Software> softwares= new ArrayList<>();
   protected List<SourceFile> sourceFiles= new ArrayList<>();
 
-  public MzDbMetaData(){
+  public MzDBMetaData(){
     //Init list as empty
   }
 
@@ -45,12 +46,12 @@ public class MzDbMetaData {
     this.instrumentConfigurations = instrumentConfigurations;
   }
 
-  public fr.profi.mzdb.db.model.CommonInstrumentParams getCommonInstrumentParams() {
-    return commonInstrumentParams;
+  public List<SharedParamTree>  getSharedParamTrees() {
+    return sharedParamTrees;
   }
 
-  public void setCommonInstrumentParams(fr.profi.mzdb.db.model.CommonInstrumentParams commonInstrumentParams) {
-    this.commonInstrumentParams = commonInstrumentParams;
+  public void setSharedParamTrees(List<SharedParamTree> sharedParamTrees) {
+    this.sharedParamTrees = sharedParamTrees;
   }
 
   public List<ProcessingMethod> getProcessingMethods() {

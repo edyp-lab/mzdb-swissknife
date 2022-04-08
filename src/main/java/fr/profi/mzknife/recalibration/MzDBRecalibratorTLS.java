@@ -26,9 +26,9 @@ import java.util.List;
 /*
  * Recalibrate a mzdb file, use mzDbWriter from Toulouse (test to compare writers)
  */
-public class MzdbRecalibratorTLS {
+public class MzDBRecalibratorTLS {
 
-  private final static Logger LOG = LoggerFactory.getLogger(MzdbRecalibrator.class);
+  private final static Logger LOG = LoggerFactory.getLogger(MzDBRecalibrator.class);
   private final static scala.Option NoneOption = None$.MODULE$;
 
   private final MzDbReader m_srcReader;
@@ -38,10 +38,13 @@ public class MzdbRecalibratorTLS {
   DataEncoding m_fittedDataEncoding;
 
 
-  public MzdbRecalibratorTLS(MzDbReader srcReader, File dstFile)  {
+  public MzDBRecalibratorTLS(MzDbReader srcReader, File dstFile)  {
     m_dstFile = dstFile;
     m_srcReader = srcReader;
     m_srcReader.enableParamTreeLoading();
+    m_srcReader.enablePrecursorListLoading();
+    m_srcReader.enableScanListLoading();
+    m_srcReader.enableDataStringCache();
   }
 
   private MzDbMetaData createMzDbMetaData() throws SQLiteException {
@@ -173,7 +176,7 @@ public class MzdbRecalibratorTLS {
 
     }
 
-    LOG.info("Created MzDbMetaData.");
+    LOG.info("Created MzDBMetaData.");
     return new MzDbMetaData(
             mzdbHeader,
             JavaConverters.asScalaIteratorConverter(dataEncodings.iterator()).asScala().toSeq(),

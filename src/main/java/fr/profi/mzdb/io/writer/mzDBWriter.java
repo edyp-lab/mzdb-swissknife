@@ -4,7 +4,7 @@ import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 import fr.profi.mzdb.BBSizes;
-import fr.profi.mzdb.db.MzDbSchema;
+import fr.profi.mzdb.db.MzDBSchema;
 import fr.profi.mzdb.db.model.*;
 import fr.profi.mzdb.db.model.params.ParamTree;
 import fr.profi.mzdb.db.model.params.param.CVEntry;
@@ -33,7 +33,7 @@ public class MzDBWriter {
   public static double MODEL_VERSION = 0.7;
 
   File dbLocation;
-  MzDbMetaData metaData;
+  MzDBMetaData metaData;
   BBSizes bbSizes;
   boolean isDIA;
 
@@ -48,7 +48,7 @@ public class MzDBWriter {
   private RunSliceStructureFactory runSliceStructureFactory;
   private long insertedSpectraCount;
 
-  public MzDBWriter(File location, MzDbMetaData metaData, BBSizes bbSizes, Boolean isDIA) {
+  public MzDBWriter(File location, MzDBMetaData metaData, BBSizes bbSizes, Boolean isDIA) {
     this.dbLocation = location;
     this.metaData = metaData;
     this.bbSizes = bbSizes;
@@ -86,7 +86,7 @@ public class MzDBWriter {
     sqliteConnection.exec("BEGIN TRANSACTION;");
 
     // Init DDL schema
-    sqliteConnection.exec(MzDbSchema.getSchemaDDL());
+    sqliteConnection.exec(MzDBSchema.getSchemaDDL());
 
     // Init some INSERT statements //
     bboxInsertStmt = sqliteConnection.prepare("INSERT INTO "+ BoundingBoxTable.tableName+" VALUES (NULL, ?, ?, ?, ?)",  false);
@@ -107,11 +107,11 @@ public class MzDBWriter {
     logger.debug(" --- insertMetaData ");
 
     // --- INSERT DATA PROCESSINGS --- //
-    logger.debug("     - INSERT DATA PROCESSINGS ");
+    logger.trace("     - INSERT DATA PROCESSINGS ");
     SQLiteStatement stmt = sqliteConnection.prepare("INSERT INTO "+ DataProcessingTable.tableName+" VALUES (NULL, ?)", false);
     List<ProcessingMethod> procMethods = metaData.getProcessingMethods();
     List<String> dpNames = procMethods.stream().map(ProcessingMethod::getDataProcessingName).distinct().collect(Collectors.toList());
-    logger.debug("     --- NBR "+dpNames.size());
+    logger.trace("     --- NBR "+dpNames.size());
     Map<String, Long> dpIdByName = new HashMap<>();
     for(String dpName : dpNames){
       stmt.bind(1, dpName);
@@ -123,9 +123,9 @@ public class MzDBWriter {
     stmt.dispose();
 
     // --- INSERT PROCESSING METHODS --- //
-    logger.debug("     - INSERT PROCESSING METHODS ");
+    logger.trace("     - INSERT PROCESSING METHODS ");
     stmt = sqliteConnection.prepare("INSERT INTO "+ ProcessingMethodTable.tableName+" VALUES (NULL, ?, ?, ?, ?, ?)", false);
-    logger.debug("     --- NBR "+procMethods.size());
+    logger.trace("     --- NBR "+procMethods.size());
     for (ProcessingMethod procMethod : procMethods) {
       stmt.bind(1, procMethod.getNumber());
       if (!procMethod.hasParamTree())
@@ -146,22 +146,31 @@ public class MzDBWriter {
     //        <cvParam cvRef="MS" accession="MS:1002634" name="Q Exactive Plus" value=""/>
     //        <cvParam cvRef="MS" accession="MS:1000529" name="instrument serial number" value="Exactive Series slot #1"/>
     //    </referenceableParamGroup>
-    logger.debug("     - INSERT SHARED PARAM ");
-    if(metaData.getCommonInstrumentParams() != null && metaData.getCommonInstrumentParams().hasParamTree() ) {
-      logger.debug("       - YES ");
-      stmt = sqliteConnection.prepare("INSERT INTO " + SharedParamTreeTable.tableName + " VALUES (NULL, ?, ?)", false);
-      stmt.bind(1, ParamTreeStringifier.stringifyParamTree(metaData.getCommonInstrumentParams().getParamTree(sqliteConnection)));
-      stmt.bind(2, metaData.getCommonInstrumentParams().getSchemaName());
+    logger.trace("     - INSERT SHARED PARAM ");
+    List<SharedParamTree> shParamTrees = metaData.getSharedParamTrees();
+    shParamTrees.sort((o1, o2) -> {
+      if(o1 == null)
+        return -1;
+      if(o2 == null)
+        return 1;
+      return Long.compare(o1.getId(), o2.getId());
+    });
+
+    logger.trace("       -- NBR "+shParamTrees.size());
+    stmt = sqliteConnection.prepare("INSERT INTO " + SharedParamTreeTable.tableName + " VALUES (NULL, ?, ?)", false);
+    for (SharedParamTree sharedParamTree :  shParamTrees){
+      stmt.bind(1, ParamTreeStringifier.stringifyRefParamGroup(sharedParamTree.getData()));
+      stmt.bind(2, sharedParamTree.getSchemaName());
       stmt.step();
       stmt.reset();
-      stmt.dispose();
     }
+    stmt.dispose();
 
     // --- INSERT INSTRUMENT CONFIGS --- //
-    logger.debug("     - INSERT INSTRUMENT CONFIGS ");
+    logger.trace("     - INSERT INSTRUMENT CONFIGS ");
     stmt = sqliteConnection.prepare("INSERT INTO " + InstrumentConfigurationTable.tableName + " VALUES (NULL, ?, NULL, ?, NULL,  ?)", false);
     List<InstrumentConfiguration> instConfigs = metaData.getInstrumentConfigurations();
-    logger.debug("     --- NBR "+instConfigs.size());
+    logger.trace("     --- NBR "+instConfigs.size());
     for (InstrumentConfiguration instConfig :  instConfigs){
       if (instConfig.getComponentList() != null) {
         stmt.bind(1, instConfig.getName());
@@ -177,7 +186,7 @@ public class MzDBWriter {
       stmt.dispose();
 
     // --- INSERT MZDB HEADER --- //
-    logger.debug("     - INSERT MZDB HEADER ");
+    logger.trace("     - INSERT MZDB HEADER ");
     stmt = sqliteConnection.prepare("INSERT INTO "+ MzdbTable.tableName+" VALUES (?, ?, ?, ?, ?)", false);
     MzDbHeader mzDbHeader = metaData.getMzdbHeader();
 
@@ -232,10 +241,10 @@ public class MzDBWriter {
     stmt.dispose();
 
     // --- INSERT RUNS --- //
-    logger.debug("     - INSERT RUNS ");
+    logger.trace("     - INSERT RUNS ");
     stmt = sqliteConnection.prepare("INSERT INTO "+ RunTable.tableName+" VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", false);
     List<Run> runs = metaData.getRuns();
-    logger.debug("     --- NBR "+runs.size());
+    logger.trace("     --- NBR "+runs.size());
     DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
     for (Run run : runs) {
       // Inject the 'acquisition parameter' CV param if it doesn't exist
@@ -269,10 +278,10 @@ public class MzDBWriter {
     stmt.dispose();
 
     // --- INSERT SOURCE FILES --- //
-    logger.debug("     - INSERT SOURCE FILES ");
+    logger.trace("     - INSERT SOURCE FILES ");
     stmt = sqliteConnection.prepare("INSERT INTO "+ SourceFileTable.tableName+" VALUES (NULL, ?, ?, ?, NULL)", false);
     List<SourceFile> sourceFiles = metaData.getSourceFiles();
-    logger.debug("         - Nbr "+sourceFiles.size());
+    logger.trace("         - Nbr "+sourceFiles.size());
     for (SourceFile sourceFile: sourceFiles) {
       stmt.bind(1, sourceFile.getName());
       stmt.bind(2, sourceFile.getLocation());
@@ -288,11 +297,11 @@ public class MzDBWriter {
     stmt.dispose();
 
     // --- INSERT SAMPLES --- //
-    logger.debug("     - INSERT SAMPLES ");
+    logger.trace("     - INSERT SAMPLES ");
     stmt = sqliteConnection.prepare("INSERT INTO "+ SampleTable.tableName+" VALUES (NULL, ?, ?, NULL)", false);
 
     List<Sample> samples = metaData.getSamples();
-    logger.debug("         - Nbr "+samples.size());
+    logger.trace("         - Nbr "+samples.size());
     if(samples.isEmpty()) {
       String sampleName;
       if(sourceFiles.isEmpty())
@@ -315,10 +324,10 @@ public class MzDBWriter {
     stmt.dispose();
 
     // --- INSERT SOFTWARE LIST --- //
-    logger.debug("     - INSERT SOFTWARE LIST ");
+    logger.trace("     - INSERT SOFTWARE LIST ");
     stmt = sqliteConnection.prepare("INSERT INTO "+ SoftwareTable.tableName+" VALUES (NULL, ?, ?, ?, NULL)", false);
     List<Software> softwareList = metaData.getSoftwares();
-    logger.debug("         - Nbr "+softwareList.size());
+    logger.trace("         - Nbr "+softwareList.size());
     for (Software software : softwareList) {
       stmt.bind(1, software.getName());
       stmt.bind(2, software.getVersion());
@@ -329,7 +338,7 @@ public class MzDBWriter {
       stmt.reset();
     }
     stmt.dispose();
-
+    logger.trace("  --- Insert MetaData done ");
   }
 
  public void close(){

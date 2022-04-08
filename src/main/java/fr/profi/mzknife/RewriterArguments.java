@@ -10,6 +10,7 @@ public class RewriterArguments {
   public final static String MZDB_RECAL_COMMAND_NAME = "recalibate_mzdb";
   public final static String MGF_RECAL_COMMAND_NAME = "recalibate_mgf";
   public final static String MGF_FILTER_COMMAND_NAME = "filter_mgf";
+  public final static String MZDB_SPLIT_COMMAND_NAME = "split_mzdb";
 
   @Parameters(commandNames =  {MZDB_RECAL_COMMAND_NAME}, commandDescription = "Recalibrate mzDB file using delta mass. Recalibration will be applied only on specified scans range.", separators = "=")
   public static class MzDBRecalibrateCommand {
@@ -78,4 +79,14 @@ public class RewriterArguments {
 
   }
 
+  @Parameters(commandNames =  {MZDB_SPLIT_COMMAND_NAME}, commandDescription = "Split Exploris mzdb in as many files as existing CV; using specified parameters.", separators = "=")
+  public static class MzDBSplitterCommand {
+
+    @Parameter(names = {"-i","--input"}, description = "mzdb input file to recalibrate", required = true, order = 0)
+    String inputFileName;
+
+    @Parameter(names = "--help", help = true)
+    boolean help;
+
+  }
 }
