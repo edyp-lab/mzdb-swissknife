@@ -4,6 +4,9 @@ import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.*;
 import fr.profi.mzdb.db.model.params.ParamTree;
+import fr.profi.mzdb.db.model.params.param.CV;
+import fr.profi.mzdb.db.model.params.param.CVTerm;
+import fr.profi.mzdb.db.model.params.param.CVUnit;
 import fr.profi.mzdb.model.DataEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +53,10 @@ public class MzDBUtil {
     List<Sample> samples = srcReader.getSamples();
     List<SourceFile> sourceFiles = srcReader.getSourceFiles();
     List<SharedParamTree> sharedParamTrees = srcReader.getSharedParamTreeList();
+    List<CV> cvs = srcReader.getCvList();
+    List<CVTerm> cvTerms = srcReader.getCvTermList();
+    List<CVUnit> cvUnits = srcReader.getCvUnitList();
+
     LOG.info("Created MzDBMetaData.");
     MzDBMetaData mzMetaData = new MzDBMetaData();
     mzMetaData.setMzdbHeader(mzdbHeader);
@@ -61,6 +68,10 @@ public class MzDBUtil {
     mzMetaData.setSamples(samples);
     mzMetaData.setSourceFiles(sourceFiles);
     mzMetaData.setSoftwares(softwares);
+    mzMetaData.setCvList(cvs);
+    mzMetaData.setCvTerms(cvTerms);
+    mzMetaData.setCvUnits(cvUnits);
+
     return mzMetaData;
   }
 }

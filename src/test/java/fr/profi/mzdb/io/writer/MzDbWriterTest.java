@@ -4,9 +4,7 @@ import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.mzdb.BBSizes;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.*;
-import fr.profi.mzdb.db.model.params.param.CVParam;
-import fr.profi.mzdb.db.model.params.param.UserParam;
-import fr.profi.mzdb.db.model.params.param.UserText;
+import fr.profi.mzdb.db.model.params.param.*;
 import fr.profi.mzdb.io.reader.iterator.SpectrumIterator;
 import fr.profi.mzdb.io.util.MzDBUtil;
 import fr.profi.mzdb.model.*;
@@ -43,6 +41,8 @@ public class MzDbWriterTest {
   private static final String expectedSharedParam_CVMS1001742_NAME ="LTQ Orbitrap Velos";
   private static final String expectedModelVersion_OVEMB150205_12_0_9_8 = "0.7";
 
+  private static final String expectedCV_ID = "psi_ms";
+  private static final String expectedCVUNIT_3_ACCESSION = "MS:1000131";
   private static final int expectedCvParamsCount_OVEMB150205_12__0_9_8 = 1;
   private static final float minMz_OVEMB150205_12 = 400f;
   private static final float maxMz_OVEMB150205_12 = 600f;
@@ -149,6 +149,26 @@ public class MzDbWriterTest {
       Assert.assertTrue(found);
       Assert.assertEquals(expectedSharedParam_CVMS1001742_NAME, cvName);
 
+    } catch (SQLiteException e) {
+      Assert.fail("SharedParamTree exception " + e.getMessage() + " for " + filename);
+    }
+
+
+    //Read CV data
+    try {
+      List<CV> cVs = mzDb.getCvList();
+      Assert.assertEquals(1, cVs.size());
+
+      String id = cVs.get(0).getCvId();
+      Assert.assertEquals(expectedCV_ID, id);
+
+
+      List<CVUnit> units = mzDb.getCvUnitList();
+      Assert.assertEquals(5, units.size());
+
+      String accession = units.get(3).getAccession();
+      Assert.assertEquals(expectedCVUNIT_3_ACCESSION, accession);
+      System.out.print(".");
     } catch (SQLiteException e) {
       Assert.fail("SharedParamTree exception " + e.getMessage() + " for " + filename);
     }
