@@ -1,5 +1,8 @@
 package fr.profi.mzdb.db.model;
 
+import fr.profi.mzdb.db.model.params.param.CV;
+import fr.profi.mzdb.db.model.params.param.CVTerm;
+import fr.profi.mzdb.db.model.params.param.CVUnit;
 import fr.profi.mzdb.model.DataEncoding;
 
 import java.util.ArrayList;
@@ -10,13 +13,16 @@ public class MzDBMetaData {
   protected MzDbHeader mzdbHeader;
   protected List<DataEncoding> dataEncodings = new ArrayList<>();
   protected List<InstrumentConfiguration> instrumentConfigurations= new ArrayList<>();
-//  protected fr.profi.mzdb.db.model.CommonInstrumentParams commonInstrumentParams;
   protected List<SharedParamTree> sharedParamTrees = new ArrayList<>();
   protected List<ProcessingMethod> processingMethods = new ArrayList<>();
   protected List<Run> runs= new ArrayList<>();
   protected List<Sample> samples= new ArrayList<>();
   protected List<Software> softwares= new ArrayList<>();
   protected List<SourceFile> sourceFiles= new ArrayList<>();
+  protected List<CV> cvList = new ArrayList<>();
+  protected List<CVTerm> cvTerms = new ArrayList<>();
+  protected List<CVUnit> cvUnits = new ArrayList<>();
+
 
   public MzDBMetaData(){
     //Init list as empty
@@ -94,5 +100,27 @@ public class MzDBMetaData {
     this.sourceFiles = sourceFiles;
   }
 
+  public List<CV> getCvList() {
+    return cvList;
+  }
 
+  public void setCvList(List<CV> cvList) {
+    this.cvList = cvList;
+  }
+
+  public List<CVTerm> getCvTerms() {
+    return cvTerms;
+  }
+
+  public void setCvTerms(List<CVTerm> cvTerms) {
+    this.cvTerms = cvTerms;
+  }
+
+  public List<CVUnit> getCvUnits() {
+    return cvUnits;
+  }
+
+  public void setCvUnits(List<CVUnit> cvUnits) {
+    this.cvUnits = cvUnits;
+  }
 }
