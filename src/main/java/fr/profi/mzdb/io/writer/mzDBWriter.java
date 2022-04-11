@@ -7,9 +7,7 @@ import fr.profi.mzdb.BBSizes;
 import fr.profi.mzdb.db.MzDBSchema;
 import fr.profi.mzdb.db.model.*;
 import fr.profi.mzdb.db.model.params.ParamTree;
-import fr.profi.mzdb.db.model.params.param.CVEntry;
-import fr.profi.mzdb.db.model.params.param.CVParam;
-import fr.profi.mzdb.db.model.params.param.UserParam;
+import fr.profi.mzdb.db.model.params.param.*;
 import fr.profi.mzdb.db.table.*;
 import fr.profi.mzdb.model.*;
 import org.apache.commons.lang3.StringUtils;
@@ -140,12 +138,47 @@ public class MzDBWriter {
     }
     stmt.dispose();
 
+    // --- INSERT CV/CVTerm/CVUnit METHODS --- //
+    logger.trace("     - INSERT CV** METHODS ");
+    stmt = sqliteConnection.prepare("INSERT INTO "+ CvTable.tableName+" VALUES (?, ?, ?, ?)", false);
+    List<CV> cvs  = metaData.getCvList();
+    logger.trace("     --- NBR CV "+cvs.size());
+    for (CV nextCV : cvs) {
+      stmt.bind(1, nextCV.getCvId());
+      stmt.bind(2, nextCV.getFullName());
+      stmt.bind(3, nextCV.getCvVersion());
+      stmt.bind(4, nextCV.getUri());
+      stmt.step();
+      stmt.reset();
+    }
+    stmt.dispose();
+
+    stmt = sqliteConnection.prepare("INSERT INTO "+ CVTermTable.tableName+" VALUES (?, ?, ?, ?)", false);
+    List<CVTerm> cvTerms  = metaData.getCvTerms();
+    logger.trace("     --- NBR CV Terms "+cvTerms.size());
+    for (CVTerm nextCVTerm : cvTerms) {
+      stmt.bind(1, nextCVTerm.getAccession());
+      stmt.bind(2, nextCVTerm.getName());
+      stmt.bind(3, nextCVTerm.getUnitAccession());
+      stmt.bind(4, nextCVTerm.getCvId());
+      stmt.step();
+      stmt.reset();
+    }
+    stmt.dispose();
+
+    stmt = sqliteConnection.prepare("INSERT INTO "+ CvUnitTable.tableName+" VALUES (?, ?, ?)", false);
+    List<CVUnit> cvUnits  = metaData.getCvUnits();
+    logger.trace("     --- NBR CV Units "+cvUnits.size());
+    for (CVUnit nextCVUnit : cvUnits) {
+      stmt.bind(1, nextCVUnit.getAccession());
+      stmt.bind(2, nextCVUnit.getName());
+      stmt.bind(3, nextCVUnit.getCvId());
+      stmt.step();
+      stmt.reset();
+    }
+    stmt.dispose();
+
     // --- INSERT SHARED PARAM TREES --- //
-    /// VDS : SharedParam data should be
-    //    <referenceableParamGroup id="CommonInstrumentParams">
-    //        <cvParam cvRef="MS" accession="MS:1002634" name="Q Exactive Plus" value=""/>
-    //        <cvParam cvRef="MS" accession="MS:1000529" name="instrument serial number" value="Exactive Series slot #1"/>
-    //    </referenceableParamGroup>
     logger.trace("     - INSERT SHARED PARAM ");
     List<SharedParamTree> shParamTrees = metaData.getSharedParamTrees();
     shParamTrees.sort((o1, o2) -> {
