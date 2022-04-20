@@ -27,6 +27,14 @@ public class MzDBSplitter {
   List<File> m_outputMzdbFiles;
   MzDbReader m_mzDbReader;
 
+  String m_fileExtension = ".mzdb";
+
+ public enum RETURN_CODE {
+     UNDEFINED, OK, NOT_EXPLORIS, NO_CVS, EXCEPTION;
+  }
+
+  private RETURN_CODE m_finishCode = RETURN_CODE.UNDEFINED;
+
   private final static String USER_TEXT_TAG = "instrumentMethods";
   private final static String FAIMS_CV_PREFIX = "FAIMS CV";
   private final static String CV_PARAM_ACC  = "MS:1001581"; // FAIMS compensation voltage CVParam
@@ -34,15 +42,21 @@ public class MzDBSplitter {
 
   public MzDBSplitter(File inputMzdbFile) {
     this.m_inputMzdbFile = inputMzdbFile;
+    initReader();
+  }
+
+  private void initReader() {
     try {
-      m_mzDbReader = new MzDbReader(inputMzdbFile, true);
+      m_mzDbReader = new MzDbReader(m_inputMzdbFile, true);
       m_mzDbReader.enableScanListLoading();
       m_mzDbReader.enableParamTreeLoading();
       m_mzDbReader.enablePrecursorListLoading();
       m_mzDbReader.enableDataStringCache();
     } catch (SQLiteException | ClassNotFoundException | FileNotFoundException e) {
       e.printStackTrace();
-      throw new IllegalArgumentException("Unable to read specifiud mzDbFile");
+      if(m_mzDbReader != null)
+        m_mzDbReader.close();
+      throw new IllegalArgumentException("Unable to read specified mzDbFile");
     }
   }
 
@@ -51,12 +65,21 @@ public class MzDBSplitter {
     int index = rootFileName.lastIndexOf('.');
     if (index > 0)
       rootFileName = rootFileName.substring(0, index);
-    rootFileName = rootFileName + prefix.trim() + ".mzdb";
+    rootFileName = rootFileName + prefix.trim() + m_fileExtension;
     return new File(m_inputMzdbFile.getParentFile(), rootFileName);
   }
 
+  public void  setOutputFileExtension(String extension){
+    m_fileExtension = extension;
+  }
+
+
   public List<File> getOutputMzdbFiles() {
     return m_outputMzdbFiles;
+  }
+
+  public RETURN_CODE getFinishStateCode(){
+    return m_finishCode;
   }
 
   public boolean splitMzDbFile() {
@@ -65,6 +88,10 @@ public class MzDBSplitter {
     Map<String, MzDBWriter> writerPerCV = new HashMap<>();
     BBSizes defaultBBsize = new BBSizes(5, 10000, 15, 0);
     try {
+
+      if(!m_mzDbReader.getConnection().isOpen())
+        initReader();
+
       SpectrumHeader[] headers = m_mzDbReader.getSpectrumHeaders();
       Arrays.sort(headers, Comparator.comparingLong(SpectrumHeader::getSpectrumId));
 
@@ -131,6 +158,11 @@ public class MzDBSplitter {
       LOG.trace(" is mzDB file USerText 'Exploris'? {} with {} CV", isSplittable, nbrCV);
       if (!isSplittable || nbrCV <=1) {
         LOG.warn(" --- The specified file is not an Exploris result or no CV has been defined");
+        if(!isSplittable)
+          m_finishCode = RETURN_CODE.NOT_EXPLORIS;
+        else if(nbrCV <= 1)
+          m_finishCode = RETURN_CODE.NO_CVS;
+        m_mzDbReader.close();
         return false;
       } else {
 
@@ -237,9 +269,13 @@ public class MzDBSplitter {
 
 //        } //End go through CVs
       }
-        return true;
+      m_mzDbReader.close();
+      m_finishCode = RETURN_CODE.OK;
+      return true;
     } catch(SQLiteException | StreamCorruptedException e){
         e.printStackTrace();
+        m_mzDbReader.close();
+        m_finishCode =RETURN_CODE.EXCEPTION;
         writerPerCV.values().forEach(w -> w.close());
         return false;
     }
