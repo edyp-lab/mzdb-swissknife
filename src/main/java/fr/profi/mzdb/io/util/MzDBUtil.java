@@ -3,11 +3,12 @@ package fr.profi.mzdb.io.util;
 import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.*;
-import fr.profi.mzdb.db.model.params.ParamTree;
 import fr.profi.mzdb.db.model.params.param.CV;
 import fr.profi.mzdb.db.model.params.param.CVTerm;
 import fr.profi.mzdb.db.model.params.param.CVUnit;
 import fr.profi.mzdb.model.DataEncoding;
+import fr.profi.mzdb.model.MzDBMetaData;
+import fr.profi.mzdb.model.ProcessingMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
