@@ -8,6 +8,8 @@ import fr.profi.mzdb.db.model.params.param.*;
 import fr.profi.mzdb.io.reader.iterator.SpectrumIterator;
 import fr.profi.mzdb.io.util.MzDBUtil;
 import fr.profi.mzdb.model.*;
+import fr.profi.mzdb.model.MzDBMetaData;
+import fr.profi.mzdb.model.SpectrumMetaData;
 import org.junit.Assert;
 import org.junit.Test;
 

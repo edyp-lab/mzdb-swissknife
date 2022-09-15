@@ -1,1 +1,0 @@
-java -cp "lib/*;mzdb-swissknife-${pom.version}.jar" -Dlogback.configurationFile=config/logback.xml fr.profi.mzknife.Rewrite  %*
