@@ -150,7 +150,7 @@ public class CommandArguments {
     @Parameter(names = {"-pClean", "--pClean_ms2_processing"}, description = "Apply pClean to MS2 spectra (pre-configured module2)", required = false)
     public Boolean pClean = false;
 
-    @Parameter(names = {"-pLabelMethod", "--pClean_label_method"}, description = "Apply pClean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX)", required = false)
+    @Parameter(names = {"-pLabelMethod", "--pClean_label_method"}, description = "Apply pClean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX)", required = false)
     public String pCleanLabelMethodName = "";
 
     @Parameter(names = "--help", help = true)
@@ -199,7 +199,7 @@ public class CommandArguments {
     public Boolean aa2 = true;
     @Parameter(names = {"-mionFilter"}, description = "Filter out immonium ions", required = false, arity = 1)
     public Boolean ionFilter = true;
-    @Parameter(names = {"-labelMethod"}, description = "Peptide labeling method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX)", required = false)
+    @Parameter(names = {"-labelMethod"}, description = "Peptide labeling method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX)", required = false)
     public String labelMethod = null;
     @Parameter(names = {"-repFilter"}, description = "Filter out reporter ions (only used if labelMethod is defined)", required = false, arity = 1)
     public Boolean repFilter = true;

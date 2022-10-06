@@ -7,18 +7,33 @@ import fr.profi.mzknife.mgf.PCleanProcessor;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
 import fr.profi.mzknife.mzdb.MzDBSplitter;
 import fr.profi.mzknife.util.AbstractProcessing;
+import org.apache.commons.lang3.builder.StandardToStringStyle;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class MzDbProcessing extends AbstractProcessing {
   private final static Logger LOG = LoggerFactory.getLogger(MzDbProcessing.class);
+
+  private final static StandardToStringStyle style = new StandardToStringStyle();
+
+  static {
+    style.setContentStart("");
+    style.setContentEnd("");
+    style.setFieldSeparator("\n");
+    style.setUseClassName(false);
+    style.setUseIdentityHashCode(false);
+  }
 
   public static void main(String[] args) {
 
@@ -99,9 +114,16 @@ public class MzDbProcessing extends AbstractProcessing {
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);
 
+
     MgfWriter writer = new MgfWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
     Optional<PrecursorMzComputationEnum> precCompEnum = Arrays.stream(PrecursorMzComputationEnum.values()).filter(v -> v.name().equalsIgnoreCase(mzDBCreateMgfCommand.precMzComputation.trim())).findFirst();
     ISpectrumProcessor specProcessor = (mzDBCreateMgfCommand.pClean) ? new PCleanProcessor(mzDBCreateMgfCommand.pCleanLabelMethodName) : new DefaultSpectrumProcessor();
+
+    String s = ToStringBuilder.reflectionToString(mzDBCreateMgfCommand, style);
+    List<String> comments = Arrays.stream(s.split(("\n"))).collect(Collectors.toList());
+    comments.add("generated on "+ DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())+" by "+System.getProperty("user.name"));
+
+    writer.setHeaderComments(comments);
 
     if (precCompEnum.isPresent()) {
       writer.write(mzDBCreateMgfCommand.outputFile, new DefaultPrecursorComputer(precCompEnum.get(), mzDBCreateMgfCommand.mzTolPPM), specProcessor, mzDBCreateMgfCommand.intensityCutoff, mzDBCreateMgfCommand.exportProlineTitle);

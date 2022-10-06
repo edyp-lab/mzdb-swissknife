@@ -35,5 +35,10 @@
       <outputDirectory>/</outputDirectory>
     </fileSet>
 
+    <fileSet>
+      <directory>${project.build.directory}/unzip-dependencies</directory>
+      <outputDirectory></outputDirectory>
+    </fileSet>
+
   </fileSets>
 </assembly>
