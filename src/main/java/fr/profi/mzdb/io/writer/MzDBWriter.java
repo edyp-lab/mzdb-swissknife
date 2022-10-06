@@ -4,15 +4,11 @@ import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 import fr.profi.mzdb.BBSizes;
-import fr.profi.mzdb.model.MzDBMetaData;
-import fr.profi.mzdb.model.MzDBSchema;
 import fr.profi.mzdb.db.model.*;
 import fr.profi.mzdb.db.model.params.ParamTree;
 import fr.profi.mzdb.db.model.params.param.*;
 import fr.profi.mzdb.db.table.*;
 import fr.profi.mzdb.model.*;
-import fr.profi.mzdb.model.ProcessingMethod;
-import fr.profi.mzdb.model.SpectrumMetaData;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -484,9 +480,10 @@ public class MzDBWriter {
     int peaksCount = sd.getPeaksCount();
 
     // FIXME: deal with empty spectra
-    if (peaksCount == 0)
+    if (peaksCount == 0) {
+      logger.warn("Empty spectrum detected !!! no insertion in the mzdb file");
       return;
-
+    }
     insertedSpectraCount += 1;
 
     int msLevel = sh.getMsLevel();
@@ -506,7 +503,8 @@ public class MzDBWriter {
 //    } else {
 
       // FIXME: min m/z should be retrieve from meta-data (scan list)
-      float curMinMz = (float) ((Math.round(sd.getMzList()[0] / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
+//      float curMinMz = (float) ((Math.floor(sd.getMzList()[0] / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
+      float curMinMz = (float) ((Math.round(metaData.getLowestMS1Mz() / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
       float curMaxMz = (float) (curMinMz + mzInc);
       //println(s"msLevel is $msLevel; min m/z is: $curMinMz")
       // FIXME: this is a workaround => find a better way to do this
@@ -624,7 +622,7 @@ public class MzDBWriter {
 
 //    val runSliceBoundaries = (msLevel, minMz, maxMz)
     Integer runSliceId = runSliceStructureFactory.getRunSliceId(msLevel, minMz, maxMz);
-    if(runSliceId ==null) {
+    if(runSliceId == null) {
       runSliceId =  runSliceStructureFactory.addRunSlice(msLevel, minMz, maxMz).getId();
     }
 

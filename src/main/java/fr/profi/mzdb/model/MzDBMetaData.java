@@ -23,6 +23,7 @@ public class MzDBMetaData {
   protected List<CVTerm> cvTerms = new ArrayList<>();
   protected List<CVUnit> cvUnits = new ArrayList<>();
 
+  protected double lowestMS1Mz = 0.0;
 
   public MzDBMetaData(){
     //Init list as empty
@@ -122,5 +123,13 @@ public class MzDBMetaData {
 
   public void setCvUnits(List<CVUnit> cvUnits) {
     this.cvUnits = cvUnits;
+  }
+
+  public double getLowestMS1Mz() {
+    return lowestMS1Mz;
+  }
+
+  public void setLowestMS1Mz(double lowestMS1Mz) {
+    this.lowestMS1Mz = lowestMS1Mz;
   }
 }
