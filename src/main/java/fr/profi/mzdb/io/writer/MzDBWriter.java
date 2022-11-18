@@ -312,7 +312,12 @@ public class MzDBWriter {
       stmt.bind(2, dateFormat.format(run.getStartTimestamp()));
       stmt.bind(3, ParamTreeStringifier.stringifyParamTree(runParamTree));
       // FIXME: do not use default values
-      stmt.bindNull(4);
+      if (metaData.getSharedParamTrees() == null || metaData.getSharedParamTrees().isEmpty()) {
+        stmt.bindNull(4);
+      } else {
+        // TODO do not suppose that there is only one SharedParam
+        stmt.bind(4, 1);
+      }
       stmt.bind(5, 1);
       stmt.bind(6, 1);
       stmt.bind(7, 1);
@@ -873,6 +878,11 @@ public class MzDBWriter {
             bytesBuffer.putFloat(spectrumData.getRightHwhmList()[i]);
            else
              bytesBuffer.putFloat(0f);
+         }
+
+         if (dataEnc.getMode().equals(DataMode.CENTROID_3D)){
+           if (spectrumData.getMobilityIndexList() != null)
+             bytesBuffer.putShort(spectrumData.getMobilityIndexList()[i]);
          }
 
          i += 1;

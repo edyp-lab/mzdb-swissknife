@@ -2,21 +2,23 @@ package fr.profi.timstof;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
-import fr.profi.brucker.timstof.io.TimstofReader;
-import fr.profi.brucker.timstof.model.AbstractTimsFrame;
-import fr.profi.brucker.timstof.model.SpectrumGeneratingMethod;
-import fr.profi.brucker.timstof.model.TimsPASEFFrame;
+import fr.profi.bruker.timstof.io.TimstofReader;
+import fr.profi.bruker.timstof.model.AbstractTimsFrame;
+import fr.profi.bruker.timstof.model.SpectrumGeneratingMethod;
+import fr.profi.bruker.timstof.model.TimsPASEFFrame;
 import fr.profi.mzdb.BBSizes;
 import fr.profi.mzdb.db.model.*;
 import fr.profi.mzdb.db.model.params.*;
 import fr.profi.mzdb.db.model.params.param.CVParam;
 import fr.profi.mzdb.db.model.params.param.UserParam;
+import fr.profi.mzdb.db.model.params.param.UserText;
 import fr.profi.mzdb.io.writer.MzDBWriter;
 import fr.profi.mzdb.model.*;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,20 +27,22 @@ import java.nio.ByteOrder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class Timstof2Mzdb {
 
     public static final float RT_EPSILON = 0.005f;
     private final static Logger LOG = LoggerFactory.getLogger(Timstof2Mzdb.class);
-    static String filepath =  "C:\\Local\\bruley\\Data\\TimsTOF\\2022002-1_eColi-10ng-30min_Slot1-10_1_313.d";
+//    static String filepath = "C:\\Local\\bruley\\Data\\TimsTOF\\TP7718MS_Slot1-58_1_7773.d";
+    static String filepath = "C:\\Local\\bruley\\Data\\TimsTOF\\2022002-1_eColi-10ng-30min_Slot1-10_1_313.d";
 //    static String filepath =  "C:\\vero\\DEV\\TimsTof\\example_data\\Ecoli10ng_2715\\Ecoli10ng60minLCGrad_nanoElute_Slot1-46_01_2715.d";
 
 
-    private File m_ttFile;
-    private SpectrumGeneratingMethod m_ms1Method;
-    private long m_fileHdl;
-    private TimstofReader m_ttReader;
+    protected File m_ttFile;
+    protected SpectrumGeneratingMethod m_ms1Method;
+    protected long m_fileHdl;
+    protected TimstofReader m_ttReader;
 
     //For all Spectra Index, map to associated Frame Index
     private Int2IntMap m_spectra2FrameIndex;
@@ -47,7 +51,7 @@ public class Timstof2Mzdb {
     private Int2IntMap m_frame2ReadSpectraCount;
 
     private Int2ObjectMap<AbstractTimsFrame> m_frameById;
-    private Int2ObjectMap<fr.profi.brucker.timstof.model.Precursor> m_precursorByIds;
+    protected Int2ObjectMap<fr.profi.bruker.timstof.model.Precursor> m_precursorByIds;
     DataEncoding m_profileDataEncoding;
     DataEncoding m_centroidDataEncoding;
     DataEncoding m_fittedDataEncoding;
@@ -63,11 +67,11 @@ public class Timstof2Mzdb {
         m_fittedDataEncoding = new DataEncoding(-1, DataMode.FITTED, PeakEncoding.HIGH_RES_PEAK, "none", ByteOrder.LITTLE_ENDIAN);
     }
 
-    private void closeFile(){
+    protected void closeFile(){
         m_ttReader.closeTimstofFile(m_fileHdl);
     }
 
-    private void initFramesData(){
+    protected void initFramesData(){
         long start = System.currentTimeMillis();
         //Read TimsFrames with associated MetaData
         List<AbstractTimsFrame> frames = m_ttReader.getFullTimsFrames(m_fileHdl);
@@ -95,7 +99,7 @@ public class Timstof2Mzdb {
         LOG.info("Read meta data for "+ frames.size()+ " frames and "+m_spectra2FrameIndex.size()+" spectrum. Duration : "+ (end-start) +" ms");
     }
 
-    private MzDBMetaData createMzDbMetaData(){
+    protected MzDBMetaData createMzDbMetaData(){
 
         ParamTree pt = new ParamTree();
         List<UserParam> ups = new ArrayList<>();
@@ -172,9 +176,38 @@ public class Timstof2Mzdb {
             fileName = fileName.substring(0, pos);
         }
 
-        Run r= new Run(-1,fileName, acqDate);
+        Run run = new Run(-1,fileName, acqDate);
+        ParamTree runParamTree = new ParamTree();
+        params = new ArrayList<>();
+        //WARNING : the conversion works only for DDA acquisition !
+        //TODO test acquisition type first then exit the converted for Acquisition mode different than DDA
+        params.add(buildCVParam("MS:1001954", "acquisition parameter", "DDA", "MS"));
+        params.add(buildCVParam("MS:1003219", "ion mobility separation", "TIMS", "MS"));
+        runParamTree.setCvParams(params);
+        run.setParamTree(runParamTree);
+
+        SharedParamTree runSharedParamTree = new SharedParamTree();
+        ReferencableParamGroup mobilityGroup = new ReferencableParamGroup("IonMobilityParams");
+        runSharedParamTree.setData(mobilityGroup);
+        runSharedParamTree.setSchemaName("IonMobilityParams");
+        List<UserText> userTexts = new ArrayList<>();
+        UserText userText = new UserText();
+        userText.setAccession("-1");
+        userText.setCvRef("none");
+        userText.setType("xsd:string");
+        userText.setName("ion_mobility_indexes");
+        final List<Pair<Integer, Double>> ionMobilityIndexes = m_ttReader.getIonMobilityIndexes(m_fileHdl);
+        String mobilities = ionMobilityIndexes.stream().map(p -> Integer.toString(p.getKey())+";"+Double.toString(p.getValue())).collect(Collectors.joining("\n"));
+        userText.setText(mobilities);
+        userTexts.add(userText);
+        mobilityGroup.setUserTexts(userTexts);
+        List<SharedParamTree> sharedParamTreeList = new ArrayList<>();
+        sharedParamTreeList.add(runSharedParamTree);
+
+        //TODO : attach shared_param_tree to the run and store shared_param_tree in the db
+
         List<Run> rList = new ArrayList<>();
-        rList.add(r);
+        rList.add(run);
 
         String splName = globalProperties.getOrDefault("SampleName", m_ttFile.getName()+"_Sample");
         Sample s = new Sample(-1,splName, new ParamTree());
@@ -195,6 +228,8 @@ public class Timstof2Mzdb {
         metaData.setSamples(sList);
         metaData.setSoftwares(softList);
         metaData.setSourceFiles(sFileList);
+        metaData.setSharedParamTrees(sharedParamTreeList);
+
 //TODO      // metaData.xxxx = ciParams;
 
         final Map<String, String> properties = m_ttReader.readGlobalProperties(m_fileHdl);
@@ -214,7 +249,7 @@ public class Timstof2Mzdb {
         return param;
     }
 
-    private void createMZdBData(){
+    protected void createMZdBData(){
         MzDBWriter writer = null;
 
         try {
@@ -268,7 +303,7 @@ public class Timstof2Mzdb {
                 }
 
                 Precursor mzdbPrecursor = null;
-                fr.profi.brucker.timstof.model.Spectrum ttSpectrum = null;
+                fr.profi.bruker.timstof.model.Spectrum ttSpectrum = null;
                 Double preMz = null;
                 Integer preCharge = null;
 
@@ -318,7 +353,7 @@ public class Timstof2Mzdb {
                                     //Create mzDB Precursor using timstof Precursor as model
 //                                    long step21 = System.currentTimeMillis();
 //                                    time_fillPrec += step21-step1;
-                                    fr.profi.brucker.timstof.model.Precursor timstofPrecursor = m_precursorByIds.get(precursorId);
+                                    fr.profi.bruker.timstof.model.Precursor timstofPrecursor = m_precursorByIds.get(precursorId);
                                     mzdbPrecursor = new Precursor();
                                     mzdbPrecursor.setSpectrumRef(ttSpectrum.getTitle());
 
@@ -413,7 +448,7 @@ public class Timstof2Mzdb {
 
     }
 
-    private fr.profi.mzdb.model.Spectrum buildMzdbSpectrum(fr.profi.brucker.timstof.model.Spectrum ttSpectrum, int mzDBSpId, int cycle, float rtInSec, int mslevel, float tic, Double precMz, Integer precCharge, Precursor precursor) {
+    protected fr.profi.mzdb.model.Spectrum buildMzdbSpectrum(fr.profi.bruker.timstof.model.Spectrum ttSpectrum, int mzDBSpId, int cycle, float rtInSec, int mslevel, float tic, Double precMz, Integer precCharge, Precursor precursor) {
         float[] intensities = ttSpectrum.getIntensities();
         int nbPeaks = intensities.length;
 
@@ -459,12 +494,12 @@ public class Timstof2Mzdb {
             LOG.warn("#### NO FRAME " + frameId+" for spectra "+spId);
         }
 
-        fr.profi.brucker.timstof.model.Spectrum ttSpectrum = timsFrame.getSingleSpectrum(m_ms1Method);
+        fr.profi.bruker.timstof.model.Spectrum ttSpectrum = timsFrame.getSingleSpectrum(m_ms1Method);
         LOG.info("spectrum {}  contains {} peaks", spId, ttSpectrum.getMasses().length);
         System.exit(0);
     }
 
-    private void fillmzDBPrecursor(Precursor mzdbPrecursor, fr.profi.brucker.timstof.model.Precursor timstofPrecursor, String collEnergy ){
+    protected void fillmzDBPrecursor(Precursor mzdbPrecursor, fr.profi.bruker.timstof.model.Precursor timstofPrecursor, String collEnergy ){
         long start = System.currentTimeMillis();//-> VDS For timing logs
         IsolationWindowParamTree isolationParams = new IsolationWindowParamTree();
         List<CVParam> isolationParamsList = new ArrayList<>();
@@ -514,7 +549,7 @@ public class Timstof2Mzdb {
                 LOG.info("Ms1 set to " + convertArgs.ms1);
                 ms1Method = convertArgs.ms1;
             } else
-                LOG.info("NO specific ms1 conversion mode set, use default SMOOTH mode.");
+                LOG.info("NO specific ms1 conversion mode set, use default {} mode.", ms1Method);
 
             File ttDir = new File(fileToConvert);
             if(!ttDir.exists()){
