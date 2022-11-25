@@ -357,7 +357,7 @@ public class Timstof2Mzdb {
                 }
                 step2 = System.currentTimeMillis();//In case wasn't set...should not occur ?!
 
-                fr.profi.mzdb.model.Spectrum mzdbSp = buildMzdbSpectrum(ttSpectrum, mzDBSpId, cycle, rtInSec, mslevel, timsFrame.getSummedIntensity());
+                fr.profi.mzdb.model.Spectrum mzdbSp = buildMzdbSpectrum(ttSpectrum, mzDBSpId, cycle, rtInSec, mslevel, timsFrame.getSummedIntensity(), preMz, preCharge, mzdbPrecursor);
 
                 if (mzdbSp != null) {
                     SpectrumMetaData spectrumMetaData = new SpectrumMetaData((long) mzDBSpId, "", "", "");
@@ -413,7 +413,7 @@ public class Timstof2Mzdb {
 
     }
 
-    private fr.profi.mzdb.model.Spectrum buildMzdbSpectrum(fr.profi.brucker.timstof.model.Spectrum ttSpectrum, int mzDBSpId, int cycle, float rtInSec, int mslevel, float tic) {
+    private fr.profi.mzdb.model.Spectrum buildMzdbSpectrum(fr.profi.brucker.timstof.model.Spectrum ttSpectrum, int mzDBSpId, int cycle, float rtInSec, int mslevel, float tic, Double precMz, Integer precCharge, Precursor precursor) {
         float[] intensities = ttSpectrum.getIntensities();
         int nbPeaks = intensities.length;
 
@@ -428,7 +428,8 @@ public class Timstof2Mzdb {
                 }
             }
 
-            SpectrumHeader spH = new SpectrumHeader((long) mzDBSpId, mzDBSpId, cycle, rtInSec, mslevel, ttSpectrum.getTitle(), nbPeaks, false, tic, ttSpectrum.getMasses()[maxIndex], intensities[maxIndex], preMz, preCharge, mzDBSpId, null);
+            SpectrumHeader spH = new SpectrumHeader((long) mzDBSpId, mzDBSpId, cycle, rtInSec, mslevel, ttSpectrum.getTitle(), nbPeaks, false, tic, ttSpectrum.getMasses()[maxIndex], intensities[maxIndex], precMz, precCharge, mzDBSpId, null);
+            spH.setPrecursor(precursor);
             SpectrumData spData = new SpectrumData(ttSpectrum.getMasses(), ttSpectrum.getIntensities());
             fr.profi.mzdb.model.Spectrum mzdbSp = new fr.profi.mzdb.model.Spectrum(spH, spData);
 
