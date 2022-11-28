@@ -2,6 +2,7 @@ package fr.profi.mzknife;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import fr.profi.mzknife.mgf.PCleanConfigTemplate;
 
 import java.util.List;
 
@@ -153,6 +154,9 @@ public class CommandArguments {
     @Parameter(names = {"-pLabelMethod", "--pClean_label_method"}, description = "Apply pClean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX)", required = false)
     public String pCleanLabelMethodName = "";
 
+    @Parameter(names = {"-pConfig" , "--pClean_config_template"}, description = "PClean config template to use. Mandatory if -pClean is specified ", converter = PCleanConfigConverter.class, required = false)
+    public PCleanConfig pCleanConfig;
+
     @Parameter(names = "--help", help = true)
     public boolean help;
 
@@ -220,4 +224,40 @@ public class CommandArguments {
     @Parameter(names = "--help", help = true)
     public boolean help;
   }
+
+  public enum PCleanConfig {
+    LABEL_FREE("LabelFree", PCleanConfigTemplate.LABEL_FREE_CONFIG),
+    XLINK("XLink", PCleanConfigTemplate.XLINK_CONFIG),
+    TMT_LABELED("TMTLabelling",  PCleanConfigTemplate.TMT_LABELLING_CONFIG);
+
+    final String commandValue;
+    final PCleanConfigTemplate pCleanConfigTemplate;
+
+    PCleanConfig(String cmdVal, PCleanConfigTemplate configTemplate) {
+      commandValue = cmdVal;
+      pCleanConfigTemplate= configTemplate;
+    }
+
+    public String getCommandValue(){
+      return commandValue;
+    }
+
+    public PCleanConfigTemplate getPCleanConfigTemplate(){
+      return pCleanConfigTemplate;
+    }
+
+    public static PCleanConfig getConfigFor(String cmdValue) {
+      for (PCleanConfig next : PCleanConfig.values()) {
+        if (next.commandValue.equals(cmdValue))
+          return next;
+      }
+      return null;
+    }
+
+    @Override
+    public String toString(){
+      return getCommandValue();
+    }
+  }
+
 }

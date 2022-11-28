@@ -56,6 +56,11 @@ public class PCleanProcessor extends MGFRewriter implements ISpectrumProcessor {
     this.ionsMerge = ionsMerge;
     this.largerThanPrecursor = largerThanPrecursor;
   }
+
+  public void setPCleanParameters(PCleanConfigTemplate template) {
+    setPCleanParameters(template.getImonFilter(), template.getRepFilter(), template.getLabelFilter(), template.getLowWinFilter(), template.getHighWinFilter(), template.getIsoReduction(), template.getChargeDeconv(), template.getIonsMerge(), template.getLargerThanPrecursor());
+  }
+
   protected MSMSSpectrum getSpectrum2Export(MSMSSpectrum inSpectrum){
 
     JSpectrum jSpectrum = new JSpectrum();
