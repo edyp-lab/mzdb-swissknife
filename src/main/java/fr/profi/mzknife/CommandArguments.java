@@ -226,20 +226,26 @@ public class CommandArguments {
   }
 
   public enum PCleanConfig {
-    LABEL_FREE("LabelFree", PCleanConfigTemplate.LABEL_FREE_CONFIG),
-    XLINK("XLink", PCleanConfigTemplate.XLINK_CONFIG),
-    TMT_LABELED("TMTLabelling",  PCleanConfigTemplate.TMT_LABELLING_CONFIG);
+    LABEL_FREE("LabelFree","Label Free", PCleanConfigTemplate.LABEL_FREE_CONFIG),
+    XLINK("XLink","XLink", PCleanConfigTemplate.XLINK_CONFIG),
+    TMT_LABELED("TMTLabelling", "TMT Labelling", PCleanConfigTemplate.TMT_LABELLING_CONFIG);
 
     final String commandValue;
+    final String displayValue;
     final PCleanConfigTemplate pCleanConfigTemplate;
 
-    PCleanConfig(String cmdVal, PCleanConfigTemplate configTemplate) {
+    PCleanConfig(String cmdVal,String displayVal, PCleanConfigTemplate configTemplate) {
       commandValue = cmdVal;
+      displayValue = displayVal;
       pCleanConfigTemplate= configTemplate;
     }
 
-    public String getCommandValue(){
+    public String getConfigCommandValue(){
       return commandValue;
+    }
+
+    public String getDisplayValue(){
+      return displayValue;
     }
 
     public PCleanConfigTemplate getPCleanConfigTemplate(){
@@ -256,7 +262,7 @@ public class CommandArguments {
 
     @Override
     public String toString(){
-      return getCommandValue();
+      return getDisplayValue();
     }
   }
 

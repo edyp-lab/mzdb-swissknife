@@ -172,13 +172,14 @@ public class MzDbProcessing extends AbstractProcessing {
           case XLINK:
           case LABEL_FREE: {
             if(pCleanMethod != null && !pCleanMethod.isEmpty()) {
-              LOG.warn("Specified pClean method " + pCleanMethod + " will be ignored. It isn't consistent with " + pCleanConfig.getCommandValue());
+              LOG.warn("Specified pClean method " + pCleanMethod + " will be ignored. It isn't consistent with " + pCleanConfig.getConfigCommandValue());
               pCleanMethod = "";
             }
+            break;
           }
           case TMT_LABELED:
             if(pCleanMethod == null || pCleanMethod.isEmpty()) {
-              throw new ParameterException("When using "+pCleanConfig.getCommandValue()+" configuration, you must specify pClean label method using -pLabelMethod");
+              throw new ParameterException("When using "+pCleanConfig.getConfigCommandValue()+" configuration, you must specify pClean label method using -pLabelMethod");
             }
         } //end switch
         specProcessor = new PCleanProcessor(pCleanMethod);
