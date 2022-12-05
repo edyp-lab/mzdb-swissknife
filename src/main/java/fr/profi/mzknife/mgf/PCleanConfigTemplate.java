@@ -9,15 +9,15 @@ public enum PCleanConfigTemplate {
     XLINK_CONFIG(true, true, true, false, false, true, true, false, true),
     TMT_LABELLING_CONFIG(true, true, true, false, false, true, true, false, true);
 
-    Boolean imonFilter;
-    Boolean repFilter;
-    Boolean labelFilter;
-    Boolean lowWinFilter;
-    Boolean highWinFilter;
-    Boolean isoReduction;
-    Boolean chargeDeconv;
-    Boolean ionsMerge;
-    Boolean largerThanPrecursor;
+    final Boolean imonFilter;
+    final Boolean repFilter;
+    final Boolean labelFilter;
+    final Boolean lowWinFilter;
+    final Boolean highWinFilter;
+    final Boolean isoReduction;
+    final Boolean chargeDeconv;
+    final Boolean ionsMerge;
+    final Boolean largerThanPrecursor;
 
     PCleanConfigTemplate(Boolean imonFilter, Boolean repFilter, Boolean labelFilter, Boolean lowWinFilter, Boolean highWinFilter, Boolean isoReduction, Boolean chargeDeconv, Boolean ionsMerge,Boolean largerThanPrecursor){
         this.imonFilter = imonFilter;
