@@ -491,7 +491,7 @@ public class Timstof2Mzdb {
         ionParams.add(buildCVParam("MS:1000042", "peak intensity", String.valueOf(timstofPrecursor.getIntensity()), "MS"));
         ion.setCvParams(ionParams);
         selectedIons.add(ion);
-        ionList.setSelectedIons(selectedIons);
+//        ionList.setSelectedIons(selectedIons);
         mzdbPrecursor.setSelectedIonList(ionList);
     }
 
