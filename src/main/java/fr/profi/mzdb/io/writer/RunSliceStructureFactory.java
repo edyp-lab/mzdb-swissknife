@@ -1,5 +1,6 @@
 package fr.profi.mzdb.io.writer;
 
+import fr.profi.mzdb.BBSizes;
 import fr.profi.mzdb.model.RunSliceHeader;
 
 import java.util.*;
@@ -8,26 +9,30 @@ import java.util.stream.Collectors;
 
 public class RunSliceStructureFactory {
 
+  private final BBSizes bbSizes;
+  private final int maxMS1SlicesHint;
   private HashMap<RunSliceKey, RunSliceHeader> runSlicesStructure = new HashMap<>();
   private HashMap<Integer, RunSliceHeader> runSliceById = new HashMap<>();
+  private final int runId;
 
-  static  protected  int runSliceId= 1;
-  private int runId;
-  public RunSliceStructureFactory(Integer runId ){
+  public RunSliceStructureFactory(Integer runId, int maxMS1SlicesHint, BBSizes bbSizes){
     this.runId = runId;
+    this.bbSizes = bbSizes;
+    this.maxMS1SlicesHint = maxMS1SlicesHint;
   }
 
   public RunSliceHeader addRunSlice(Integer msLevel, Float beginMz, Float endMz){
+    int offset = (msLevel == 1) ? 1 : maxMS1SlicesHint + 1;
+    int runSliceId = (int) (Math.floor(beginMz / bbSizes.BB_MZ_HEIGHT_MS1)) + offset;
     RunSliceHeader runSlice = new RunSliceHeader(runSliceId, msLevel, -1, beginMz, endMz, runId);
     fr.profi.mzdb.io.writer.RunSliceStructureFactory.RunSliceKey key = new RunSliceKey(msLevel, beginMz,endMz);
     runSlicesStructure.put(key, runSlice);
     runSliceById.put(runSlice.getId(),runSlice);
-    runSliceId ++;
     return runSlice;
   }
 
   public boolean hasRunSlice(Integer msLevel, Float beginMz, Float endMz) {
-    return hasRunSlice(new RunSliceKey(msLevel, beginMz,endMz));
+    return hasRunSlice(new RunSliceKey(msLevel, beginMz, endMz));
   }
 
   public boolean hasRunSlice(RunSliceKey key) {

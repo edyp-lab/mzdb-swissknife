@@ -10,7 +10,7 @@ import fr.profi.mzdb.db.model.params.param.*;
 import fr.profi.mzdb.db.table.*;
 import fr.profi.mzdb.model.*;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,9 +41,17 @@ public class MzDBWriter {
   private SQLiteStatement spectrumInsertStmt;
 
   private DataEncodingRegistry dataEncodingRegistry;
-  private BoundingBoxWriterCache bbCache;
+  private BoundingBoxCache bbCache;
+
+  private List<SpectrumToWrite> spectrumCache = new ArrayList<>();
   private RunSliceStructureFactory runSliceStructureFactory;
   private long insertedSpectraCount;
+
+
+  protected final StopWatch globalSW = new StopWatch("Global");
+  protected final StopWatch insertSpectrumSW = new StopWatch("InsertSpectrum");
+  protected final StopWatch metadataSW = new StopWatch("MetaData");
+
 
   public MzDBWriter(File location, MzDBMetaData metaData, BBSizes bbSizes, Boolean isDIA) {
     this.dbLocation = location;
@@ -51,9 +59,14 @@ public class MzDBWriter {
     this.bbSizes = bbSizes;
     this.isDIA = isDIA;
     dataEncodingRegistry = new DataEncodingRegistry();
-    runSliceStructureFactory = new RunSliceStructureFactory(1);
+    runSliceStructureFactory = new RunSliceStructureFactory(1, 1000, bbSizes);
     insertedSpectraCount = 0;
-    bbCache = new BoundingBoxWriterCache(bbSizes);
+    bbCache = new BoundingBoxCache(bbSizes);
+    globalSW.start();
+    insertSpectrumSW.start();
+    insertSpectrumSW.suspend();
+    metadataSW.start();
+    metadataSW.suspend();
   }
 
   public void initialize() throws SQLiteException {
@@ -76,7 +89,7 @@ public class MzDBWriter {
     sqliteConnection.exec("PRAGMA automatic_index=OFF;");
     sqliteConnection.exec("PRAGMA locking_mode=EXCLUSIVE;") ;// we want to lock file access for the whole creation process
 
-    sqliteConnection.exec("PRAGMA foreign_keys=OFF;") ;// FIXME: there is an issue with tmp_spectrum that need to be solved to enable this
+    sqliteConnection.exec("PRAGMA foreign_keys=OFF;") ;
     sqliteConnection.exec("PRAGMA ignore_check_constraints=ON;"); // to be a little bit faster (should be OFF in dev mode)
 
     // BEGIN TRANSACTION
@@ -94,17 +107,18 @@ public class MzDBWriter {
     for(int i =0; i<24; i++)
       placeHolders.append("?, ");
     placeHolders.delete(placeHolders.length()-2, placeHolders.length()-1);
-    spectrumInsertStmt = sqliteConnection.prepare("INSERT INTO tmp_spectrum VALUES ("+placeHolders+")",  false);
+    spectrumInsertStmt = sqliteConnection.prepare("INSERT INTO spectrum VALUES ("+placeHolders+")",  false);
 
   }
 
   private void insertMetaData() throws SQLiteException {
+    metadataSW.resume();
     if (this.sqliteConnection == null)
       throw new IllegalStateException("The database connection isn't initialized  !");
     logger.debug(" --- insertMetaData ");
 
-    // --- INSERT DATA PROCESSINGS --- //
-    logger.trace("     - INSERT DATA PROCESSINGS ");
+    // --- INSERT DATA PROCESSING --- //
+    logger.trace("     - INSERT DATA PROCESSING ");
     SQLiteStatement stmt = sqliteConnection.prepare("INSERT INTO "+ DataProcessingTable.tableName+" VALUES (NULL, ?)", false);
     List<ProcessingMethod> procMethods = metaData.getProcessingMethods();
     List<String> dpNames = procMethods.stream().map(ProcessingMethod::getDataProcessingName).distinct().collect(Collectors.toList());
@@ -370,6 +384,7 @@ public class MzDBWriter {
       stmt.reset();
     }
     stmt.dispose();
+    metadataSW.stop();
     logger.trace("  --- Insert MetaData done ");
   }
 
@@ -377,11 +392,15 @@ public class MzDBWriter {
     if (this.sqliteConnection == null)
       throw new IllegalStateException("The method open() must first be called");
     try {
+
       // FIXME: insert missing BBs (last entries in bbCache)
-       this.bbCache.getBBRowsKeys().forEach(p -> flushBBRow(p.getKey(), p.getValue()));
+      for(Pair<Integer, IsolationWindow> p : this.bbCache.getBBRowsKeys()) {
+         Long bbFirstSpectrumId = flushBBRow(p.getKey(), p.getValue());
+         if (bbFirstSpectrumId != null) flushSpectrum(p.getKey(), p.getValue(), bbFirstSpectrumId);
+       }
+
 
       try {
-        sqliteConnection.exec("CREATE TABLE spectrum AS SELECT * FROM tmp_spectrum;");
 
         // --- INSERT DATA ENCODINGS --- //
         SQLiteStatement stmt = sqliteConnection.prepare("INSERT INTO "+ DataEncodingTable.tableName+" VALUES (?, ?, ?, ?, ?, ?, NULL)", false);
@@ -454,27 +473,30 @@ public class MzDBWriter {
 
         this.sqliteConnection.dispose();
 
-        if (!this.sqliteConnection.isMemoryDatabase()) {
-          // Update sqlite_sequence table using a fresh connection
-          // DBO: I don't why but it doesn't work inside the previous connection
-          this.sqliteConnection = new SQLiteConnection(dbLocation);
-          this.sqliteConnection.open( false);
-          this.sqliteConnection.exec("INSERT INTO sqlite_sequence VALUES ('spectrum',"+insertedSpectraCount+");");
-          this.sqliteConnection.dispose();
-        }
-
+//        if (!this.sqliteConnection.isMemoryDatabase()) {
+//          // Update sqlite_sequence table using a fresh connection
+//          // DBO: I don't why but it doesn't work inside the previous connection
+//          this.sqliteConnection = new SQLiteConnection(dbLocation);
+//          this.sqliteConnection.open( false);
+//          this.sqliteConnection.exec("INSERT INTO sqlite_sequence VALUES ('spectrum',"+insertedSpectraCount+");");
+//          this.sqliteConnection.dispose();
+//        }
       }
 
       } catch (SQLiteException e) {
         e.printStackTrace();
       }
 
+    globalSW.stop();
+    insertSpectrumSW.stop();
+    logger.debug("mzDB Writer closed");
     }
 
   /*
    */
   public void insertSpectrum(Spectrum spectrum, SpectrumMetaData metaDataAsText, DataEncoding dataEncoding) throws SQLiteException {
 
+    insertSpectrumSW.resume();
     SpectrumHeader sh = spectrum.getHeader();
     SpectrumData sd = spectrum.getData();
     int peaksCount = sd.getPeaksCount();
@@ -494,31 +516,25 @@ public class MzDBWriter {
     DataEncoding dataEnc = this.dataEncodingRegistry.getOrAddDataEncoding(dataEncoding);
     Double mzInc = (msLevel == 1) ? bbSizes.BB_MZ_HEIGHT_MS1 :  bbSizes.BB_MZ_HEIGHT_MSn;
 
-    // FIXME: how should we store empty spectra? should we create empty entries in existing BBs?
-    Long bbFirstSpectrumId = 0L;
-//    if (peaksCount == 0) { //VDS: Should not occur. Return if it's the case above
-//      BoundingBoxToWrite curBB = getBBWithNextSpectrumSlice(spectrum,spectrumId,spectrumTime,msLevel,dataEnc,isolationWindowOpt,0, 0.0f, mzInc.floatValue());
-//      bbFirstSpectrumId = (curBB.getSpectrumIds() == null || curBB.getSpectrumIds().isEmpty() )? 0L : curBB.getSpectrumIds().get(0);
-//
-//    } else {
 
       // FIXME: min m/z should be retrieve from meta-data (scan list)
-//      float curMinMz = (float) ((Math.floor(sd.getMzList()[0] / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
-      float curMinMz = (float) ((Math.round(metaData.getLowestMS1Mz() / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
+      float curMinMz = (float) ((Math.floor(sd.getMzList()[0] / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
+//      float curMinMz = (float) ((Math.round(metaData.getLowestMS1Mz() / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
       float curMaxMz = (float) (curMinMz + mzInc);
-      //println(s"msLevel is $msLevel; min m/z is: $curMinMz")
+
       // FIXME: this is a workaround => find a better way to do this
       if (msLevel == 2 && !isDIA) {
         curMinMz = 0;
         curMaxMz = (float)bbSizes.BB_MZ_HEIGHT_MSn;
       }
-    //println(s"msLevel is $msLevel; retained m/z range: $curMinMz/$curMaxMz")
+
       boolean isTimeForNewBBRow = bbCache.isTimeForNewBBRow(msLevel, isolationWindowOpt, spectrumTime);
 
       // Flush BB row when we reach a new row (retention time exceeding size of the bounding box for this MS level)
       if (isTimeForNewBBRow) {
         //println("******************************************************* FLUSHING BB ROW ****************************************")
-        flushBBRow(msLevel, isolationWindowOpt);
+        Long bbFirstSpectrumId = flushBBRow(msLevel, isolationWindowOpt);
+        if (bbFirstSpectrumId != null) flushSpectrum(msLevel, isolationWindowOpt, bbFirstSpectrumId);
       }
 
       // TODO: put _getBBWithNextSpectrumSlice back here when memory issues are fixed
@@ -532,91 +548,112 @@ public class MzDBWriter {
 
         if (i == 0) {
           curBB = getBBWithNextSpectrumSlice(spectrum,spectrumId,spectrumTime,msLevel,dataEnc,isolationWindowOpt, i, curMinMz, curMaxMz);
-          bbFirstSpectrumId = curBB.spectrumIds.get(0);
-        }
-        else if (mz > curMaxMz) {
+        } else if (mz > curMaxMz) {
           // Creates new bounding boxes even for empty data => should be removed in mzDB V2
           while (mz > curMaxMz) {
             curMinMz += mzInc;
             curMaxMz += mzInc;
-
             // Very important: ensure run slices are created in increasing m/z order
             if (!runSliceStructureFactory.hasRunSlice(msLevel, curMinMz, curMaxMz))
               runSliceStructureFactory.addRunSlice(msLevel, curMinMz, curMaxMz);
           }
-
           curBB = getBBWithNextSpectrumSlice(spectrum,spectrumId,spectrumTime,msLevel,dataEnc,isolationWindowOpt, i, curMinMz, curMaxMz);
         }
 
         if (curBB.spectrumSlices.get(curBB.getSpectrumIds().size()-1) != null ) {
             // Add data point to the Bounding Box
             SpectrumSliceIndex lastSpectrumSlice = curBB.getSpectrumSlices().get(curBB.getSpectrumIds().size()-1);
-            lastSpectrumSlice.lastPeakIdx = i;
+            lastSpectrumSlice.setLastPeakIdx(i);
         }
 
         i++;
       }
-//    }
 
     // --- INSERT SPECTRUM HEADER --- //
 
-      SQLiteStatement stmt = spectrumInsertStmt;
-       stmt.bind(1, spectrumId);
+    spectrumCache.add(new SpectrumToWrite(sh, metaDataAsText, spectrumId, dataEnc));
 
-      // FIXME: Proline should be able to work with files where the initialID differs from the mzDB ID, thus sh.getInitialId() should be used when it is fixed
-      stmt.bind(2, spectrumId); // sh.getInitialId
-      stmt.bind(3, sh.getTitle());
-      stmt.bind(4, sh.getCycle());
-      stmt.bind(5, sh.getTime());
-      stmt.bind(6, msLevel);
+    insertSpectrumSW.suspend();
+  } // ends insertSpectrum
 
-      if (sh.getActivationType() == null)
-        stmt.bindNull(7);
-      else
-        stmt.bind(7, sh.getActivationType().name());
+  private void flushSpectrum(int msLevel, IsolationWindow isolationWindow, Long bbFirstSpectrumId) throws SQLiteException {
 
-      stmt.bind(8, sh.getTIC());
-      stmt.bind(9, sh.getBasePeakMz());
-      stmt.bind(10, sh.getBasePeakIntensity());
+    if (isolationWindow != null) {
+      throw new UnsupportedOperationException("Not Yet implemented");
+    }
 
-      // Precursor information
-      if (sh.getPrecursorMz() == null || sh.getPrecursorMz() == 0.0)
-        stmt.bindNull(11);
-      else
-        stmt.bind(11, sh.getPrecursorMz());
-      if (sh.getPrecursorCharge() == null || sh.getPrecursorCharge() ==  0)
-        stmt.bindNull(12);
-      else
-        stmt.bind(12, sh.getPrecursorCharge());
+    List<SpectrumToWrite> newSpectrumCache = new ArrayList<>();
 
-      stmt.bind(13, sh.getPeaksCount());
-
-      // XML Meta-data bindings
-      stmt.bind(14, metaDataAsText.getParamTree());
-      stmt.bind(15, metaDataAsText.getScanList());
-
-      if (StringUtils.isEmpty(metaDataAsText.getPrecursorList()))
-        stmt.bindNull(16);
-      else {
-        String precList = metaDataAsText.getPrecursorList();
-        stmt.bind(16, precList);
+    for (SpectrumToWrite s : spectrumCache) {
+      if (s.header.getMsLevel() == msLevel) {
+        insertSpectrumToWrite(s, bbFirstSpectrumId);
+      } else {
+        newSpectrumCache.add(s);
       }
+    }
 
-      stmt.bindNull(17); // No pruduct list
+    spectrumCache = newSpectrumCache ;
+  }
+
+  private void insertSpectrumToWrite(SpectrumToWrite spectrumToWrite, Long bbFirstSpectrumId) throws SQLiteException {
+
+    SQLiteStatement stmt = spectrumInsertStmt;
+    stmt.bind(1, spectrumToWrite.spectrumId);
+
+    // FIXME: Proline should be able to work with files where the initialID differs from the mzDB ID, thus sh.getInitialId() should be used when it is fixed
+    stmt.bind(2, spectrumToWrite.spectrumId); // sh.getInitialId
+    stmt.bind(3, spectrumToWrite.header.getTitle());
+    stmt.bind(4, spectrumToWrite.header.getCycle());
+    stmt.bind(5, spectrumToWrite.header.getTime());
+    stmt.bind(6, spectrumToWrite.header.getMsLevel());
+
+    if (spectrumToWrite.header.getActivationType() == null)
+      stmt.bindNull(7);
+    else
+      stmt.bind(7, spectrumToWrite.header.getActivationType().name());
+
+    stmt.bind(8, spectrumToWrite.header.getTIC());
+    stmt.bind(9, spectrumToWrite.header.getBasePeakMz());
+    stmt.bind(10, spectrumToWrite.header.getBasePeakIntensity());
+
+    // Precursor information
+    if (spectrumToWrite.header.getPrecursorMz() == null || spectrumToWrite.header.getPrecursorMz() == 0.0)
+      stmt.bindNull(11);
+    else
+      stmt.bind(11, spectrumToWrite.header.getPrecursorMz());
+    if (spectrumToWrite.header.getPrecursorCharge() == null || spectrumToWrite.header.getPrecursorCharge() ==  0)
+      stmt.bindNull(12);
+    else
+      stmt.bind(12, spectrumToWrite.header.getPrecursorCharge());
+
+    stmt.bind(13, spectrumToWrite.header.getPeaksCount());
+
+    // XML Meta-data bindings
+    stmt.bind(14, spectrumToWrite.metadata.getParamTree());
+    stmt.bind(15, spectrumToWrite.metadata.getScanList());
+
+    if (StringUtils.isEmpty(spectrumToWrite.metadata.getPrecursorList()))
+      stmt.bindNull(16);
+    else {
+      String precList = spectrumToWrite.metadata.getPrecursorList();
+      stmt.bind(16, precList);
+    }
+
+    stmt.bindNull(17); // No pruduct list
 //      if (metaDataAsText.productList.isEmpty) stmt.bindNull(17)
 //      else stmt.bind(17, smd.productList.get)
 
-      stmt.bind(18, 1);
-      stmt.bind(19, 1);
-      stmt.bind(20, 1);
-      stmt.bind(21, 1);
-      stmt.bind(22, 1);
-      stmt.bind(23, dataEnc.getId());
-      stmt.bind(24, bbFirstSpectrumId);
+    stmt.bind(18, 1);
+    stmt.bind(19, 1);
+    stmt.bind(20, 1);
+    stmt.bind(21, 1);
+    stmt.bind(22, 1);
+    stmt.bind(23, spectrumToWrite.dataEncoding.getId());
+    stmt.bind(24, bbFirstSpectrumId);
 
-      stmt.step();
-      stmt.reset();
-  } // ends insertSpectrum
+    stmt.step();
+    stmt.reset();
+  }
 
   private BoundingBoxToWrite getBBWithNextSpectrumSlice(Spectrum spectrum, Long spectrumId, Float spectrumTime, Integer msLevel, DataEncoding dataEnc, IsolationWindow isolationWindow, Integer peakIdx, Float minMz, Float maxMz) {
 
@@ -644,7 +681,7 @@ public class MzDBWriter {
     return  cachedBB;
   }
 
-  private void flushBBRow(Integer msLevel, IsolationWindow isolationWindowOpt)  {
+  private Long flushBBRow(Integer msLevel, IsolationWindow isolationWindowOpt)  {
 
     // Retrieve the longest list of spectra ids
     //val lcCtxBySpecId = new LongMap[ILcContext]()
@@ -694,8 +731,9 @@ public class MzDBWriter {
     };
 
     bbCache.forEachCachedBB(msLevel, isolationWindowOpt, func2);
-    // Remove BB row
     bbCache.removeBBRow(msLevel, isolationWindowOpt);
+
+    return distinctBBRowSpectraIds.isEmpty() ? null : distinctBBRowSpectraIds.get(0);
   }
 
   private void insertAndIndexBoundingBox(BoundingBoxToWrite bb) throws SQLiteException { // --- INSERT BOUNDING BOX --- //
@@ -765,13 +803,6 @@ public class MzDBWriter {
       e.printStackTrace();
       isRTreeIndexInserted = false;
     }
-//    {
-//        case t: Throwable => {
-//          // TODO: use configured Logger
-//          println("Can't parse <selectedIon> XML String because: " + t.getMessage)
-//          false
-//        }
-//      }
 
 
     if (isRTreeIndexInserted) {
@@ -791,7 +822,6 @@ public class MzDBWriter {
    List<Long> spectrumIds = bb.getSpectrumIds();
    List<SpectrumSliceIndex> spectrumSlices = bb.getSpectrumSlices();
    int slicesCount = spectrumSlices.size();
-   logger.trace("BB "+bb.getId()+" has "+slicesCount+" slicesCount ");
    int bbPeaksCount = 0;
    for(SpectrumSliceIndex spectrumSliceIndex : spectrumSlices){
      if(spectrumSliceIndex != null)
@@ -807,12 +837,6 @@ public class MzDBWriter {
    int peakStructSize = dataEnc.getPeakStructSize();
 
    int bbLen = (int)(8L * slicesCount) + (peakStructSize * bbPeaksCount);
-    /*println("bbLen: "+bbLen)
-    println("peaksCount: " + bbPeaksCount) // 10494
-    println("peakStructSize: " + peakStructSize)*/
-
-   //val structSize = sizeof[libmzdb.libmzdb_data_point_64_32_t]
-   //println("structSize: "+ structSize)
 
    byte[] bbBytes = new byte[bbLen];
    //val bytesBuffer = new scala.collection.mutable.ArrayBuffer[Byte](bbLen.toInt)
@@ -881,332 +905,11 @@ public class MzDBWriter {
    return bbId;
  }
 
-  private static class BoundingBoxWriterCache {
+ public void dumpExecutionWatches() {
+   logger.info("Global stop watch : "+globalSW.formatTime());
+   logger.info("insertSpectrum stop watch : "+insertSpectrumSW.formatTime());
+   logger.info("metadata stop watch : "+metadataSW.formatTime());
 
-    private BBSizes bbSizes;
-    private int bbId = 0;
-    private HashMap<BoundingBoxMapKey, BoundingBoxToWrite> boundingBoxMap = new HashMap<>();// [Int,Option[IsolationWindow]), BoundingBox]
-
-    public BoundingBoxWriterCache(BBSizes bbs){
-      this.bbSizes= bbs;
-    }
-
-    public Boolean isTimeForNewBBRow(Integer msLevel, IsolationWindow isolationWindow, Float curSpecTime) { //VDS Removed isolationWindow TODO VERIFY
-      Float bbRowFirstSpecTimeOpt = _findBBFirstTime(msLevel, isolationWindow);
-      if (bbRowFirstSpecTimeOpt == null)
-        return true;
-
-    float maxRtWidth = (msLevel == 1) ?  bbSizes.BB_RT_WIDTH_MS1 :  bbSizes.BB_RT_WIDTH_MSn;
-    return (curSpecTime - bbRowFirstSpecTimeOpt) > maxRtWidth;
-
-  }
-
-    private Float _findBBFirstTime(Integer msLevel, IsolationWindow isolationWindow){
-
-      List<Map.Entry<BoundingBoxMapKey,BoundingBoxToWrite>> sortedEntries = new ArrayList<>(boundingBoxMap.entrySet());
-      sortedEntries.sort(Map.Entry.comparingByValue(Comparator.comparingInt(BoundingBoxToWrite::getRunSliceId)));
-      for(Map.Entry<BoundingBoxMapKey, BoundingBoxToWrite> e : sortedEntries){
-        if(Objects.equals(e.getValue().getMsLevel(), msLevel) && Objects.equals(e.getKey().isolationWindow,isolationWindow))
-          return e.getValue().getFirstTime();
-      }
-      return null;
-  }
-//    private def _findBBFirstTime(msLevel: Int, isolationWindow: Option[IsolationWindow]): Option[Float] = {
-//      this.forEachCachedBB(msLevel, isolationWindow) { bb =>
-//        return Some(bb.firstTime)
-//      }
-//
-//      None
-//    }
-
-    protected void forEachCachedBB(Integer msLevel, IsolationWindow isolationWindow, Function<BoundingBoxToWrite, Void> fn){ //TODO
-      List<Map.Entry<BoundingBoxMapKey,BoundingBoxToWrite>> sortedEntries = new ArrayList<>(boundingBoxMap.entrySet());
-      sortedEntries.sort(Map.Entry.comparingByValue(Comparator.comparingInt(BoundingBoxToWrite::getRunSliceId)));
-      for(Map.Entry<BoundingBoxMapKey, BoundingBoxToWrite> e : sortedEntries) {
-
-        if(Objects.equals(e.getValue().getMsLevel(), msLevel) && Objects.equals(e.getKey().isolationWindow,isolationWindow)){
-          fn.apply(e.getValue());
-        }
-      }
-    }
-//  def forEachCachedBB(msLevel: Int, isolationWindow: Option[IsolationWindow])(boundingBoxFn: BoundingBox => Unit): Unit = {
-//      for (
-//        // FIXME: sorting by runSliceId is not sage => nothing ensures that run slice IDs are created in the right order
-//              ((runSliceId,isoWinOpt),bb) <- boundingBoxMap.toList.sortBy(_._2.runSliceId);
-//      if bb.msLevel == msLevel && isoWinOpt == isolationWindow
-//    ) {
-//        boundingBoxFn(bb)
-//      }
-//    }
-
-
-    private void removeBBRow(Integer msLevel , IsolationWindow isolationWindow) {
-      // TODO: do we need to sort?
-      List<Map.Entry<BoundingBoxMapKey,BoundingBoxToWrite>> sortedEntries = new ArrayList<>(boundingBoxMap.entrySet());
-      sortedEntries.sort(Map.Entry.comparingByValue(Comparator.comparingInt(BoundingBoxToWrite::getRunSliceId)));
-      for(Map.Entry<BoundingBoxMapKey, BoundingBoxToWrite> e : sortedEntries) {
-        if(Objects.equals(e.getValue().getMsLevel(), msLevel) && Objects.equals(e.getKey().isolationWindow,isolationWindow)){
-          BoundingBoxToWrite removedBBOpt = boundingBoxMap.remove(e.getKey());
-//          if (removedBBOpt != null) {
-            //VDS : commente dans mzdb4s
-            //boundingBoxMap -= removedBBOpt.get
-
-              /*
-              for (sbOpt <- removedBBOpt.get.spectrumSlices; sb <- sbOpt) {
-                sb.clear()
-                reusableSpecBuilders += sb
-              }
-              */
-
-              /*
-              val bb = removedBBOpt.get._2
-              bb.spectrumIds.clear()
-              bb.spectrumSlices.clear()
-              reusableBBs += bb // TODO: remove this reusableBBs feature
-              */
-//          }
-        }
-      }
-    }
-
-    public List<Pair<Integer, IsolationWindow>> getBBRowsKeys() { //: List[(Int, Option[IsolationWindow])]
-      List<Pair<Integer, IsolationWindow>> returnedBBRowsKeys = new ArrayList<>();
-      List<Map.Entry<BoundingBoxMapKey,BoundingBoxToWrite>> sortedEntries = new ArrayList<>(boundingBoxMap.entrySet());
-      sortedEntries.sort(Map.Entry.comparingByValue(Comparator.comparingInt(BoundingBoxToWrite::getRunSliceId)));
-      for(Map.Entry<BoundingBoxMapKey, BoundingBoxToWrite> e : sortedEntries) {
-        returnedBBRowsKeys.add(new ImmutablePair<>(e.getValue().msLevel, e.getKey().isolationWindow));
-      }
-      return returnedBBRowsKeys;
-    }
-//def getBBRowsKeys(): List[(Int, Option[IsolationWindow])] = {
-//      val foundKeys = for (
-//              ((runSliceId,isoWinOpt),bb) <- boundingBoxMap.toList.sortBy(_._2.runSliceId)
-//    ) yield (bb.msLevel,isoWinOpt)
-//
-//      foundKeys.distinct.sortBy { case (msLevel,isoWinOpt) =>
-//        (msLevel,isoWinOpt.map(_.minMz).getOrElse(0f))
-//      }
-//    }
-
-    public BoundingBoxToWrite getCachedBoundingBox(Integer runSliceId, IsolationWindow isolationWindow){
-      BoundingBoxMapKey k = new BoundingBoxMapKey(runSliceId, isolationWindow);
-      return boundingBoxMap.get(k);
-    }
-
-//    def getCachedBoundingBox(
-//            runSliceId: Int,
-//            isolationWindow: Option[IsolationWindow] // defined only for DIA data
-//  ): Option[BoundingBox] = {
-//            val bbKey = (runSliceId,isolationWindow)
-//    boundingBoxMap.find(_._1 == bbKey).map(_._2)
-//  }
-
-    public BoundingBoxToWrite createBoundingBox(Float spectrumTime, Integer runSliceId, Integer msLevel, DataEncoding de, IsolationWindow isolationWindow, Integer slicesCountHint){
-      BoundingBoxMapKey k = new BoundingBoxMapKey(runSliceId, isolationWindow);
-      assert(! boundingBoxMap.containsKey(k));
-      bbId ++;
-      BoundingBoxToWrite newOrCachedBB = new BoundingBoxToWrite();
-      newOrCachedBB.setSpectrumIds(new ArrayList<>(slicesCountHint));
-      newOrCachedBB.setSpectrumSlices(new ArrayList<>(slicesCountHint));
-      newOrCachedBB.setId(bbId);
-      newOrCachedBB.setFirstTime(spectrumTime);
-      newOrCachedBB.setLastTime(spectrumTime);
-      newOrCachedBB.setRunSliceId(runSliceId);
-      newOrCachedBB.setMsLevel(msLevel);
-      newOrCachedBB.setDataEncoding(de);
-      newOrCachedBB.setIsolationWindow(isolationWindow);
-
-      boundingBoxMap.put(k,newOrCachedBB);
-
-      return newOrCachedBB;
-    }
-
-//    def createBoundingBox(
-//            spectrumTime: Float,
-//            runSliceId: Int,
-//            msLevel: Int,
-//            dataEncoding: DataEncoding,
-//            isolationWindow: Option[IsolationWindow], // defined only for DIA data,
-//            slicesCountHint: Int
-//  ): BoundingBox = {
-//            val bbKey = (runSliceId,isolationWindow)
-//    assert(! boundingBoxMap.contains(bbKey), "cannot create a new bounding box since cache has not been flushed")
-//
-//    /*val newOrCachedBB = if (reusableBBs.isEmpty) {
-//      val newBB = BoundingBox()
-//      newBB.spectrumIds = new ArrayBuffer[Long](slicesCountHint)
-//      newBB.spectrumSlices = new ArrayBuffer[Option[SpectrumSliceIndex]](slicesCountHint)
-//      newBB
-//    } else {
-//      val bb = reusableBBs.head
-//      reusableBBs -= bb
-//      bb
-//    }*/
-//
-//    val newOrCachedBB = BoundingBox(
-//            spectrumIds = new ArrayBuffer[Long](slicesCountHint),
-//            spectrumSlices = new ArrayBuffer[Option[SpectrumSliceIndex]](slicesCountHint),
-//            id = { bbId += 1; bbId },
-//    firstTime = spectrumTime,
-//            lastTime = spectrumTime,
-//            runSliceId = runSliceId,
-//            msLevel = msLevel,
-//            dataEncoding = dataEncoding,
-//            isolationWindow = isolationWindow
-//    )
-//
-//    //boundingBoxMap ++= List( (bbKey, newOrCachedBB) )
-//    boundingBoxMap(bbKey) = newOrCachedBB
-//    //println(boundingBoxMap.size)
-//
-//    newOrCachedBB
-//  }
-
-
-  }
-
-  private static class BoundingBoxMapKey{
-    Integer runSliceId;
-    IsolationWindow isolationWindow;
-
-    public BoundingBoxMapKey(Integer runSliceId, IsolationWindow isolationWindow) {
-      this.runSliceId = runSliceId;
-      this.isolationWindow = isolationWindow;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-      BoundingBoxMapKey that = (BoundingBoxMapKey) o;
-      return runSliceId.equals(that.runSliceId) &&
-              Objects.equals(isolationWindow, that.isolationWindow);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(runSliceId, isolationWindow);
-    }
-  }
-
-  private static class BoundingBoxToWrite{
-
-    Integer id = 0;
-    Float firstTime = 0f;
-    Float lastTime = 0f;
-    Integer runSliceId = 0;
-    Integer msLevel = 0;
-    DataEncoding dataEncoding  = null;
-    IsolationWindow isolationWindow= null;
-    List<Long> spectrumIds= null;
-    List<SpectrumSliceIndex> spectrumSlices = null; //var spectrumSlices: ArrayBuffer[Option[SpectrumSliceIndex]] = null
-
-    public Integer getId() {
-      return id;
-    }
-
-    public void setId(Integer id) {
-      this.id = id;
-    }
-
-    public Float getFirstTime() {
-      return firstTime;
-    }
-
-    public void setFirstTime(Float firstTime) {
-      this.firstTime = firstTime;
-    }
-
-    public Float getLastTime() {
-      return lastTime;
-    }
-
-    public IsolationWindow getIsolationWindow() {
-      return isolationWindow;
-    }
-
-    public void setIsolationWindow(IsolationWindow isolationWindow) {
-      this.isolationWindow = isolationWindow;
-    }
-
-    public void setLastTime(Float lastTime) {
-      this.lastTime = lastTime;
-    }
-
-    public Integer getRunSliceId() {
-      return runSliceId;
-    }
-
-    public void setRunSliceId(Integer runSliceId) {
-      this.runSliceId = runSliceId;
-    }
-
-    public Integer getMsLevel() {
-      return msLevel;
-    }
-
-    public void setMsLevel(Integer msLevel) {
-      this.msLevel = msLevel;
-    }
-
-    public DataEncoding getDataEncoding() {
-      return dataEncoding;
-    }
-
-    public void setDataEncoding(DataEncoding dataEncoding) {
-      this.dataEncoding = dataEncoding;
-    }
-
-    public List<Long> getSpectrumIds() {
-      return spectrumIds;
-    }
-
-    public void setSpectrumIds(List<Long> spectrumIds) {
-      this.spectrumIds = spectrumIds;
-    }
-
-    public List<SpectrumSliceIndex> getSpectrumSlices() {
-      return spectrumSlices;
-    }
-
-    public void setSpectrumSlices(List<SpectrumSliceIndex> spectrumSlices) {
-      this.spectrumSlices = spectrumSlices;
-    }
-  }
-
-   private static class SpectrumSliceIndex{
-    private SpectrumData spectrumData;
-    private float firstPeakIdx;
-    private float lastPeakIdx;
-
-     public SpectrumSliceIndex(SpectrumData spectrumData, float firstPeakIdx, float lastPeakIdx) {
-       this.spectrumData = spectrumData;
-       this.firstPeakIdx = firstPeakIdx;
-       this.lastPeakIdx = lastPeakIdx;
-     }
-
-     public SpectrumData getSpectrumData() {
-       return spectrumData;
-     }
-
-     public float getFirstPeakIdx() {
-       return firstPeakIdx;
-     }
-
-     public float getLastPeakIdx() {
-       return lastPeakIdx;
-     }
-
-     protected  int peaksCount() {
-
-       if(! (lastPeakIdx >=  firstPeakIdx) ) {
-         throw new IllegalArgumentException("invalid pair of firstPeakIdx/lastPeakIdx ("+firstPeakIdx+","+lastPeakIdx+")");
-       }
-
-       return (int) ( 1 + lastPeakIdx - firstPeakIdx);
-     }
-
-
-   }
+ }
 
 }

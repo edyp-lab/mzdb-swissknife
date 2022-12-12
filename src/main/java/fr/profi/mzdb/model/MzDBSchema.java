@@ -146,7 +146,7 @@ public class MzDBSchema {
     sb.append( "run_id INTEGER NOT NULL,");
     sb.append( "FOREIGN KEY (run_id) REFERENCES run (id) \n);\n");
 
-    sb.append( "CREATE TEMPORARY TABLE tmp_spectrum (");
+    sb.append( "CREATE TABLE spectrum (");
     sb.append( "id INTEGER PRIMARY KEY AUTOINCREMENT,");
     sb.append( "initial_id INTEGER NOT NULL,");
     sb.append( "title TEXT NOT NULL,");
@@ -177,7 +177,7 @@ public class MzDBSchema {
     sb.append( "FOREIGN KEY (run_id) REFERENCES run (id),");
     sb.append( "FOREIGN KEY (data_processing_id) REFERENCES data_processing (id),");
     sb.append( "FOREIGN KEY (data_encoding_id) REFERENCES data_encoding (id),");
-    sb.append( "FOREIGN KEY (bb_first_spectrum_id) REFERENCES tmp_spectrum (id) \n);\n");
+    sb.append( "FOREIGN KEY (bb_first_spectrum_id) REFERENCES spectrum (id) \n);\n");
 
     sb.append( "CREATE TABLE bounding_box (");
     sb.append( "id INTEGER PRIMARY KEY AUTOINCREMENT,");
@@ -186,8 +186,8 @@ public class MzDBSchema {
     sb.append( "first_spectrum_id INTEGER NOT NULL,");
     sb.append( "last_spectrum_id INTEGER NOT NULL,");
     sb.append( "FOREIGN KEY (run_slice_id) REFERENCES run_slice (id),");
-    sb.append( "FOREIGN KEY (first_spectrum_id) REFERENCES tmp_spectrum (id),");      // TODO: when do we reference spectrum instead of tmp_spectrum
-    sb.append( "FOREIGN KEY (last_spectrum_id) REFERENCES tmp_spectrum (id) \n);\n"); // TODO: when do we reference spectrum instead of tmp_spectrum
+    sb.append( "FOREIGN KEY (first_spectrum_id) REFERENCES spectrum (id),");
+    sb.append( "FOREIGN KEY (last_spectrum_id) REFERENCES spectrum (id) \n);\n");
 
     sb.append( "CREATE TABLE cv_term (");
     sb.append( "accession TEXT NOT NULL,");
