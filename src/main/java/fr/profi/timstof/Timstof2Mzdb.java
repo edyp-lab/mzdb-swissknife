@@ -514,7 +514,7 @@ public class Timstof2Mzdb {
                 LOG.info("Ms1 set to " + convertArgs.ms1);
                 ms1Method = convertArgs.ms1;
             } else
-                LOG.info("NO specific ms1 convertion mode set, use default SMOOTH mode.");
+                LOG.info("NO specific ms1 conversion mode set, use default SMOOTH mode.");
 
             File ttDir = new File(fileToConvert);
             if(!ttDir.exists()){

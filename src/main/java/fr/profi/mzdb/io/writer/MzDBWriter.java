@@ -470,17 +470,7 @@ public class MzDBWriter {
         if (this.rtreeInsertStmt != null) rtreeInsertStmt.dispose();
         if (this.msnRtreeInsertStmt != null) msnRtreeInsertStmt.dispose();
         if (this.spectrumInsertStmt != null) spectrumInsertStmt.dispose();
-
         this.sqliteConnection.dispose();
-
-//        if (!this.sqliteConnection.isMemoryDatabase()) {
-//          // Update sqlite_sequence table using a fresh connection
-//          // DBO: I don't why but it doesn't work inside the previous connection
-//          this.sqliteConnection = new SQLiteConnection(dbLocation);
-//          this.sqliteConnection.open( false);
-//          this.sqliteConnection.exec("INSERT INTO sqlite_sequence VALUES ('spectrum',"+insertedSpectraCount+");");
-//          this.sqliteConnection.dispose();
-//        }
       }
 
       } catch (SQLiteException e) {
