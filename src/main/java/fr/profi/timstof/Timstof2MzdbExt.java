@@ -10,15 +10,16 @@ import fr.profi.bruker.timstof.model.TimsPASEFFrame;
 import fr.profi.mzdb.BBSizes;
 import fr.profi.mzdb.db.model.params.Precursor;
 import fr.profi.mzdb.io.writer.MzDBWriter;
-import fr.profi.mzdb.model.*;
+import fr.profi.mzdb.model.DataEncoding;
+import fr.profi.mzdb.model.MzDBMetaData;
+import fr.profi.mzdb.model.Spectrum;
+import fr.profi.mzdb.model.SpectrumMetaData;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.nio.ByteOrder;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
@@ -35,7 +36,8 @@ public class Timstof2MzdbExt extends Timstof2Mzdb {
   public Timstof2MzdbExt(File ttFile, SpectrumGeneratingMethod ms1Method, MobilityRepresentationMethod mobilityMethod) {
     super(ttFile, ms1Method);
     this.mobilityMethod = mobilityMethod;
-    m_centroid3dDataEncoding = new DataEncoding(-1, DataMode.CENTROID_3D, PeakEncoding.HIGH_RES_PEAK, "none", ByteOrder.LITTLE_ENDIAN);
+    // TODO use mzdb-access ion_mobility branch to enable this feature
+    //    m_centroid3dDataEncoding = new DataEncoding(-1, DataMode.CENTROID_3D, PeakEncoding.HIGH_RES_PEAK, "none", ByteOrder.LITTLE_ENDIAN);
   }
 
   @Override
@@ -141,30 +143,29 @@ public class Timstof2MzdbExt extends Timstof2Mzdb {
                 }
               }
             } else if (mobilityMethod == MobilityRepresentationMethod.PER_PEAK) {
-              List<Peak3D> peakList = new ArrayList<>();
-              for (int scanIdx = 1; scanIdx < timsFrame.getNbrScans(); scanIdx++) {
-                ttSpectrum = ((TimsMSFrame) timsFrame).getScanSpectrum(scanIdx);
-
-                if (ttSpectrum != null) {
-                  double[] masses = ttSpectrum.getMasses();
-                  float[] intensities = ttSpectrum.getIntensities();
-                  for (int k = 0; k < ttSpectrum.getMasses().length; k++) {
-                    peakList.add(new Peak3D(masses[k], intensities[k], (short)scanIdx));
-                  }
-                }
-              }
-
-              Collections.sort(peakList);
-
-              step2 = System.currentTimeMillis();
-              time_ms1 += step2 - step1;  //--> VDS-TIME: Ecoli (10Go) ~10min
-              //                                //--> VDS-TIME: to get duration debug info
-              mzdbSp = buildMzdbSpectrum(peakList, "Frame_" + timsFrame.getId(), mzDBSpId, cycle, rtInSec, 1, timsFrame.getSummedIntensity(), null, null, null);
-              if (mzdbSp != null) {
-                mzDBSpId = writeMzdbSpectrum(writer, timsFrame.getMsmsType(), mzdbSp, ms1Encoding);
-                long step4 = System.currentTimeMillis();
-                time_write += step4 - step2;//--> VDS-TIME: Ecoli (10Go) ~4.5min
-              }
+// TODO use mzdb-access ion_mobility branch to enable this feature
+//              List<Peak3D> peakList = new ArrayList<>();
+//              for (int scanIdx = 1; scanIdx < timsFrame.getNbrScans(); scanIdx++) {
+//                ttSpectrum = ((TimsMSFrame) timsFrame).getScanSpectrum(scanIdx);
+//
+//                if (ttSpectrum != null) {
+//                  double[] masses = ttSpectrum.getMasses();
+//                  float[] intensities = ttSpectrum.getIntensities();
+//                  for (int k = 0; k < ttSpectrum.getMasses().length; k++) {
+//                    peakList.add(new Peak3D(masses[k], intensities[k], (short)scanIdx));
+//                  }
+//                }
+//              }
+//              Collections.sort(peakList);
+//              step2 = System.currentTimeMillis();
+//              time_ms1 += step2 - step1;  //--> VDS-TIME: Ecoli (10Go) ~10min
+//              //                                //--> VDS-TIME: to get duration debug info
+//              mzdbSp = buildMzdbSpectrum(peakList, "Frame_" + timsFrame.getId(), mzDBSpId, cycle, rtInSec, 1, timsFrame.getSummedIntensity(), null, null, null);
+//              if (mzdbSp != null) {
+//                mzDBSpId = writeMzdbSpectrum(writer, timsFrame.getMsmsType(), mzdbSp, ms1Encoding);
+//                long step4 = System.currentTimeMillis();
+//                time_write += step4 - step2;//--> VDS-TIME: Ecoli (10Go) ~4.5min
+//              }
             }
             break;
 
@@ -253,44 +254,43 @@ public class Timstof2MzdbExt extends Timstof2Mzdb {
 
   }
 
-  private Spectrum buildMzdbSpectrum(List<Peak3D> peakList, String title, int mzDBSpId, int cycle, float rtInSec, int mslevel, int tic, Double precMz, Integer precCharge, Precursor precursor) {
-
-    double[] masses = new double[peakList.size()];
-    float[] intensities = new float[peakList.size()];
-    short[] mobilityIndexes = new short[peakList.size()];
-
-    for (int k = 0; k < peakList.size(); k++) {
-      Peak3D peak = peakList.get(k);
-      masses[k] = peak.mass;
-      intensities[k] = peak.intensity;
-      mobilityIndexes[k] = peak.mobilityIndex;
-    }
-
-    if (intensities.length > 0) { //At least one peak ... VDS TODO:  or create an empty spectrum ?
-      int maxIndex = 0;
-      float prevIntensity = intensities[0];
-      for (int index = 1; index < intensities.length; index++) {
-        float intAtIndex = intensities[index];
-        if (intAtIndex > prevIntensity) {
-          maxIndex = index;
-          prevIntensity = intAtIndex;
-        }
-      }
-
-      SpectrumHeader spH = new SpectrumHeader((long) mzDBSpId, mzDBSpId, cycle, rtInSec, mslevel, title, peakList.size(), false, tic, masses[maxIndex], intensities[maxIndex], precMz, precCharge, mzDBSpId, null);
-      spH.setPrecursor(precursor);
-      SpectrumData spData = new SpectrumData(masses, intensities, null, null, mobilityIndexes);
-      fr.profi.mzdb.model.Spectrum mzdbSp = new fr.profi.mzdb.model.Spectrum(spH, spData);
-
-      return mzdbSp;
-
-    } else {
-      LOG.info("mzdb scan id {} has no peaks ! It will not be written in the mzdb outputfile", mzDBSpId);
-      return null;
-    }
-
-
-  }
+//TODO use mzdb-access ion_mobility branch to enable this feature
+//  private Spectrum buildMzdbSpectrum(List<Peak3D> peakList, String title, int mzDBSpId, int cycle, float rtInSec, int mslevel, int tic, Double precMz, Integer precCharge, Precursor precursor) {
+//
+//    double[] masses = new double[peakList.size()];
+//    float[] intensities = new float[peakList.size()];
+//    short[] mobilityIndexes = new short[peakList.size()];
+//
+//    for (int k = 0; k < peakList.size(); k++) {
+//      Peak3D peak = peakList.get(k);
+//      masses[k] = peak.mass;
+//      intensities[k] = peak.intensity;
+//      mobilityIndexes[k] = peak.mobilityIndex;
+//    }
+//
+//    if (intensities.length > 0) { //At least one peak ... VDS TODO:  or create an empty spectrum ?
+//      int maxIndex = 0;
+//      float prevIntensity = intensities[0];
+//      for (int index = 1; index < intensities.length; index++) {
+//        float intAtIndex = intensities[index];
+//        if (intAtIndex > prevIntensity) {
+//          maxIndex = index;
+//          prevIntensity = intAtIndex;
+//        }
+//      }
+//
+//      SpectrumHeader spH = new SpectrumHeader((long) mzDBSpId, mzDBSpId, cycle, rtInSec, mslevel, title, peakList.size(), false, tic, masses[maxIndex], intensities[maxIndex], precMz, precCharge, mzDBSpId, null);
+//      spH.setPrecursor(precursor);
+//      SpectrumData spData = new SpectrumData(masses, intensities, null, null, mobilityIndexes);
+//      fr.profi.mzdb.model.Spectrum mzdbSp = new fr.profi.mzdb.model.Spectrum(spH, spData);
+//
+//      return mzdbSp;
+//
+//    } else {
+//      LOG.info("mzdb scan id {} has no peaks ! It will not be written in the mzdb outputfile", mzDBSpId);
+//      return null;
+//    }
+//  }
 
   private int writeMzdbSpectrum(MzDBWriter writer, AbstractTimsFrame.MsMsType msmsType, Spectrum mzdbSp, DataEncoding encoding) throws SQLiteException {
 
