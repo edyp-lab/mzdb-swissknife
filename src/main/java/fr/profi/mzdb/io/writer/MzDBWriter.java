@@ -509,7 +509,6 @@ public class MzDBWriter {
 
       // FIXME: min m/z should be retrieve from meta-data (scan list)
       float curMinMz = (float) ((Math.floor(sd.getMzList()[0] / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
-//      float curMinMz = (float) ((Math.round(metaData.getLowestMS1Mz() / bbSizes.BB_MZ_HEIGHT_MS1)) * bbSizes.BB_MZ_HEIGHT_MS1);
       float curMaxMz = (float) (curMinMz + mzInc);
 
       // FIXME: this is a workaround => find a better way to do this
