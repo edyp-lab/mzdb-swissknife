@@ -154,7 +154,7 @@ public class CommandArguments {
     @Parameter(names = {"-pLabelMethod", "--pClean_label_method"}, description = "Apply pClean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX)", required = false)
     public String pCleanLabelMethodName = "";
 
-    @Parameter(names = {"-pConfig" , "--pClean_config_template"}, description = "PClean config template to use. Mandatory if -pClean is specified ", converter = PCleanConfigConverter.class, required = false)
+    @Parameter(names = {"-pConfig" , "--pClean_config_template"}, description = "PClean config template to use. Mandatory if -pClean is specified (LabelFree, XLink or TMTLabelling)", converter = PCleanConfigConverter.class, required = false)
     public PCleanConfig pCleanConfig;
 
     @Parameter(names = "--help", help = true)

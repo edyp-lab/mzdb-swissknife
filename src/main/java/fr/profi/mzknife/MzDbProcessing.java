@@ -4,6 +4,8 @@ import com.almworks.sqlite4java.SQLiteException;
 import com.beust.jcommander.ParameterException;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.writer.mgf.*;
+import fr.profi.mzdb.model.IonMobilityMode;
+import fr.profi.mzdb.model.IonMobilityType;
 import fr.profi.mzknife.mgf.PCleanProcessor;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
 import fr.profi.mzknife.mzdb.MzDBSplitter;
@@ -115,12 +117,17 @@ public class MzDbProcessing extends AbstractProcessing {
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);
 
+    MgfWriter writer = new MgfWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
+
+    MzDbReader mzDbReader = writer.getMzDbReader();
+    final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
+
     // --- Get and verify parameters for pClean (they should be consistent).
     // --- Define SpectrumProcessor to use and configure it
     ISpectrumProcessor specProcessor = createSpectrumProcessor(mzDBCreateMgfCommand);
 
     // --- Define which PrecursorComputation method to use.
-    IPrecursorComputation precursorComputation = createPrecursorComputation(mzDBCreateMgfCommand);
+    IPrecursorComputation precursorComputation = createPrecursorComputation(mzDBCreateMgfCommand, ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS);
 
     //Call writer to create mgf
     String s = ToStringBuilder.reflectionToString(mzDBCreateMgfCommand, style);
@@ -131,12 +138,11 @@ public class MzDbProcessing extends AbstractProcessing {
     }
     comments.add("generated on "+ DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())+" by "+System.getProperty("user.name"));
 
-    MgfWriter writer = new MgfWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
     writer.setHeaderComments(comments);
     writer.write(mzDBCreateMgfCommand.outputFile, precursorComputation, specProcessor, mzDBCreateMgfCommand.intensityCutoff, mzDBCreateMgfCommand.exportProlineTitle);
   }
 
-  private static IPrecursorComputation createPrecursorComputation(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand) {
+  private static IPrecursorComputation createPrecursorComputation(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand, Boolean hasIonMobility) {
     IPrecursorComputation precursorComputation;
     Optional<PrecursorMzComputationEnum> precCompEnum = Arrays.stream(PrecursorMzComputationEnum.values()).filter(v -> v.name().equalsIgnoreCase(mzDBCreateMgfCommand.precMzComputation.trim())).findFirst();
     if (precCompEnum.isPresent()) {
@@ -147,7 +153,7 @@ public class MzDbProcessing extends AbstractProcessing {
       precursorComputation = new IsolationWindowPrecursorExtractor(mzDBCreateMgfCommand.mzTolPPM);
     } else if (mzDBCreateMgfCommand.precMzComputation.equals("mgf_boost_v3.6")) {
       // specif precursor method (mgfBoost v 3.6)
-      precursorComputation =  new IsolationWindowPrecursorExtractor_v3_6(mzDBCreateMgfCommand.mzTolPPM);
+      precursorComputation =  new IsolationWindowPrecursorExtractor_v3_6(mzDBCreateMgfCommand.mzTolPPM, hasIonMobility);
 //    } else if (mzDBCreateMgfCommand.precMzComputation.equals("isolation_window_extracted_v3.7")) {
 //      IPrecursorComputation precComputer = new IsolationWindowPrecursorExtractor_v3_7(mzDBCreateMgfCommand.mzTolPPM);
 //      writer.write(mzDBCreateMgfCommand.outputFile, precComputer, specProcessor, mzDBCreateMgfCommand.intensityCutoff, mzDBCreateMgfCommand.exportProlineTitle);
@@ -163,11 +169,12 @@ public class MzDbProcessing extends AbstractProcessing {
     boolean usePClean = createMgfCommand.pClean;
     String pCleanMethod = createMgfCommand.pCleanLabelMethodName;
 
-    ISpectrumProcessor specProcessor;
+    ISpectrumProcessor specProcessor = null;
     if(usePClean){
-      if(pCleanConfig == null)
-        throw new ParameterException("if pClean usage is specified, the -pConfig parameter should be specified ! ");
-      else {
+      if(pCleanConfig == null) {
+        LOG.error("if pClean usage is specified, the -pConfig parameter should be specified ! ");
+        usage();
+      } else {
         switch (pCleanConfig){
           case XLINK:
           case LABEL_FREE: {
