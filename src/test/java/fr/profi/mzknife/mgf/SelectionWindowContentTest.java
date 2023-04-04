@@ -67,7 +67,7 @@ public class SelectionWindowContentTest {
 
       final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
 
-      IsolationWindowPrecursorExtractor_v3_6 precursorExtractor_v3_6 = new IsolationWindowPrecursorExtractor_v3_6(mzTol, ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS);
+      IsolationWindowPrecursorExtractor_v3_6 precursorExtractor_v3_6 = new IsolationWindowPrecursorExtractor_v3_6(mzTol, (ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS));
       IsolationWindowPrecursorExtractor_v3_7 precursorExtractor_v3_7 = new IsolationWindowPrecursorExtractor_v3_7(mzTol);
 
       for (SpectrumHeader sh : mzDbReader.getMs2SpectrumHeaders()) {

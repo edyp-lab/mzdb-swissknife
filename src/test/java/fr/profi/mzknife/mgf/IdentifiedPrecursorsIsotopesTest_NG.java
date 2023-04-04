@@ -57,7 +57,7 @@ public class IdentifiedPrecursorsIsotopesTest_NG {
       mzDbReader.enableScanListLoading();
 
       final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
-      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol,ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS);
+      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol,(ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS));
 
       logger.info("nb identifications = {}", idents.size());
       logger.info("nb MS2 scans = {}", mzDbReader.getSpectraCount(2));

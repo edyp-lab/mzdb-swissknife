@@ -127,7 +127,7 @@ public class MzDbProcessing extends AbstractProcessing {
     ISpectrumProcessor specProcessor = createSpectrumProcessor(mzDBCreateMgfCommand);
 
     // --- Define which PrecursorComputation method to use.
-    IPrecursorComputation precursorComputation = createPrecursorComputation(mzDBCreateMgfCommand, ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS);
+    IPrecursorComputation precursorComputation = createPrecursorComputation(mzDBCreateMgfCommand, (ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS));
 
     //Call writer to create mgf
     String s = ToStringBuilder.reflectionToString(mzDBCreateMgfCommand, style);

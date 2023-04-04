@@ -64,7 +64,7 @@ public class SearchIdentifiedPrecursorsTest {
       logger.info("nb MS2 scans = {}", mzDbReader.getSpectraCount(2));
 
       final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
-      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol, ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS);
+      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol, (ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS));
       
       for( Map.Entry<Integer, List<Identification>> entry : identsByScan.entrySet()) {
         Integer scan = entry.getKey();
