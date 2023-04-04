@@ -52,7 +52,7 @@ public class MzDBSplitter {
       m_mzDbReader.enableParamTreeLoading();
       m_mzDbReader.enablePrecursorListLoading();
       m_mzDbReader.enableDataStringCache();
-    } catch (SQLiteException | ClassNotFoundException | FileNotFoundException e) {
+    } catch (SQLiteException | FileNotFoundException e) {
       e.printStackTrace();
       if(m_mzDbReader != null)
         m_mzDbReader.close();

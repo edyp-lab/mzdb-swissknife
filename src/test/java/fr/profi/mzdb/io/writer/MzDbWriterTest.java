@@ -81,7 +81,7 @@ public class MzDbWriterTest {
       mzDb.enablePrecursorListLoading();
       mzDb.enableDataStringCache();
       Assert.assertNotNull("Reader cannot be created", mzDb);
-    } catch (ClassNotFoundException | FileNotFoundException | SQLiteException e) {
+    } catch ( FileNotFoundException | SQLiteException e) {
       Assert.fail("MzDB reader instantiation exception " + e.getMessage() + " for " + srcFilename);
     }
 
@@ -126,7 +126,7 @@ public class MzDbWriterTest {
     try {
       mzDb = new MzDbReader(file, true);
 
-    } catch (ClassNotFoundException | FileNotFoundException | SQLiteException e) {
+    } catch ( FileNotFoundException | SQLiteException e) {
       Assert.fail("MzDB reader instantiation exception " + e.getMessage() + " for " + filename);
     }
     Assert.assertNotNull("Reader cannot be created", mzDb);

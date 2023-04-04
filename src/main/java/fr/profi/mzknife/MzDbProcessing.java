@@ -87,7 +87,7 @@ public class MzDbProcessing extends AbstractProcessing {
       }
   }
 
-  public static void recalibrateMzdb(CommandArguments.MzDBRecalibrateCommand mzDBRecalibrateCommand) throws ClassNotFoundException, FileNotFoundException, SQLiteException {
+  public static void recalibrateMzdb(CommandArguments.MzDBRecalibrateCommand mzDBRecalibrateCommand) throws FileNotFoundException, SQLiteException {
     File mzdbSrcFile = new File(mzDBRecalibrateCommand.inputFileName);
     File mzdbDstFile = getDestFile(mzDBRecalibrateCommand.outputFileName, ".recal.mzdb", mzdbSrcFile);
     LOG.info(" MzDbProcessing " + mzdbSrcFile.getName() + " to " + mzdbDstFile.getAbsolutePath());
@@ -112,7 +112,7 @@ public class MzDbProcessing extends AbstractProcessing {
     }
   }
 
-  public static void mzdbcreateMgf(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand) throws SQLiteException, ClassNotFoundException, IOException {
+  public static void mzdbcreateMgf(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand) throws SQLiteException, IOException {
 
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);

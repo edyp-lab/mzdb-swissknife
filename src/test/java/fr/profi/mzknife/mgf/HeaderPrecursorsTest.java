@@ -85,8 +85,6 @@ public  class HeaderPrecursorsTest {
       throw new RuntimeException(e);
     } catch (FileNotFoundException e) {
       throw new RuntimeException(e);
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e);
     }
   }
 

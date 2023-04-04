@@ -112,8 +112,6 @@ public class GeneratedPrecursorsVsIdentificationsTest_NG {
       throw new RuntimeException(e);
     } catch (SQLiteException e) {
       throw new RuntimeException(e);
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e);
     }
   }
 

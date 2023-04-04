@@ -194,7 +194,7 @@ public class MzDbWriterFakeFileTest {
     try {
       mzDb = new MzDbReader(file, true);
 
-    } catch (ClassNotFoundException | FileNotFoundException | SQLiteException e) {
+    } catch ( FileNotFoundException | SQLiteException e) {
       e.printStackTrace();
       Assert.fail("MzDB reader instantiation exception " + e.getMessage() + " for " + filename);
     }
