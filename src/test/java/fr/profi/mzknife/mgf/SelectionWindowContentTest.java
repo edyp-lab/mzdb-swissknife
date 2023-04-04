@@ -5,6 +5,8 @@ import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.writer.mgf.IsolationWindowPrecursorExtractor_v3_6;
 import fr.profi.mzdb.io.writer.mgf.IsolationWindowPrecursorExtractor_v3_7;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
+import fr.profi.mzdb.model.IonMobilityMode;
+import fr.profi.mzdb.model.IonMobilityType;
 import fr.profi.mzdb.model.SpectrumHeader;
 import fr.profi.util.metrics.Metric;
 import org.junit.Ignore;
@@ -58,13 +60,15 @@ public class SelectionWindowContentTest {
       fw.write(Arrays.stream(annotations).collect(Collectors.joining("\t")));
       fw.newLine();
 
-      IsolationWindowPrecursorExtractor_v3_6 precursorExtractor_v3_6 = new IsolationWindowPrecursorExtractor_v3_6(mzTol);
-      IsolationWindowPrecursorExtractor_v3_7 precursorExtractor_v3_7 = new IsolationWindowPrecursorExtractor_v3_7(mzTol);
-
       MzDbReader mzDbReader = new MzDbReader(mzdbFilePath, true);
       mzDbReader.enablePrecursorListLoading();
       mzDbReader.enableScanListLoading();
       logger.info("nb MS2 scans = {}", mzDbReader.getSpectraCount(2));
+
+      final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
+
+      IsolationWindowPrecursorExtractor_v3_6 precursorExtractor_v3_6 = new IsolationWindowPrecursorExtractor_v3_6(mzTol, ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS);
+      IsolationWindowPrecursorExtractor_v3_7 precursorExtractor_v3_7 = new IsolationWindowPrecursorExtractor_v3_7(mzTol);
 
       for (SpectrumHeader sh : mzDbReader.getMs2SpectrumHeaders()) {
 

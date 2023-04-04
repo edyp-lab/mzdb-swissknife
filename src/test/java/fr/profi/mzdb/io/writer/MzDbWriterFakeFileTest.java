@@ -46,7 +46,7 @@ public class MzDbWriterFakeFileTest {
    }
 
   private static String filename = "Fake.mzdb";
-  private static String destFilename = "C:\\Local\\bruley\\Data\\Proline\\Data\\mzdb\\wrong_NEW_"+filename;
+  private static String destFilename = ".\\wrong_NEW_"+filename;
   private static final BBSizes BB_SIZES = new BBSizes(5, 10000, 15, 15);
   private static DataEncoding FITTED_ENCODING = new DataEncoding(-1,DataMode.FITTED, PeakEncoding.HIGH_RES_PEAK, "none",ByteOrder.LITTLE_ENDIAN);
 

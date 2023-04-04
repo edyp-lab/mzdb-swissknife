@@ -5,6 +5,8 @@ import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.reader.iterator.SpectrumIterator;
 import fr.profi.mzdb.io.writer.mgf.IsolationWindowPrecursorExtractor_v3_6;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
+import fr.profi.mzdb.model.IonMobilityMode;
+import fr.profi.mzdb.model.IonMobilityType;
 import fr.profi.mzdb.model.SpectrumHeader;
 import fr.profi.util.metrics.Metric;
 import org.junit.Ignore;
@@ -42,10 +44,12 @@ public class GeneratedPrecursorsVsIdentificationsTest_NG {
       HashSet<Integer> matches = new HashSet<>();
       String mzdbFilePath = "C:/Local/bruley/Data/Proline/Data/mzdb/Exploris/Xpl1_002790.mzDB";
 
-      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol);
       MzDbReader mzDbReader = new MzDbReader(mzdbFilePath, true);
       mzDbReader.enablePrecursorListLoading();
       mzDbReader.enableScanListLoading();
+
+      final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
+      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol,ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS);
 
       logger.info("nb identifications = {}", idents.size());
       logger.info("nb MS2 scans = {}", mzDbReader.getSpectraCount(2));
