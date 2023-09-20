@@ -1,22 +1,20 @@
 package fr.profi.mzknife.mzdb;
 
-import com.almworks.sqlite4java.SQLiteException;
-import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.writer.mgf.*;
-import fr.profi.mzdb.model.DataEncoding;
-import fr.profi.mzdb.model.Spectrum;
 import fr.profi.mzknife.mgf.PCleanProcessor;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.Map;
+import java.io.File;
 
 public class MzDbProcessingTest {
 
+  final static Logger logger = LoggerFactory.getLogger(MzDbProcessingTest.class);
+
   private static String srcFilename = "/OVEMB150205_12.raw.0.9.8.mzDB";
   private static String destFilename = "New_OVEMB150205_12.raw.0.9.8.mgf";
-
 
   @Test
   public void testCreateMgf(){
