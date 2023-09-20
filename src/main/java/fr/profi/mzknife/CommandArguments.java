@@ -157,6 +157,9 @@ public class CommandArguments {
     @Parameter(names = {"-pConfig" , "--pClean_config_template"}, description = "PClean config template to use. Mandatory if -pClean is specified (LabelFree, XLink or TMTLabelling)", converter = PCleanConfigConverter.class, required = false)
     public PCleanConfig pCleanConfig;
 
+    @Parameter(names = {"-da", "--dump_annotations"}, description = "Dump precursor computer Annotations for statistics purposes", required = false)
+    public Boolean dAnnot = false;
+
     @Parameter(names = "--help", help = true)
     public boolean help;
 
