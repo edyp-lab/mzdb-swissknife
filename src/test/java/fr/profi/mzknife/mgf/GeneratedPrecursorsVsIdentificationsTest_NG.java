@@ -1,9 +1,11 @@
 package fr.profi.mzknife.mgf;
 
 import com.almworks.sqlite4java.SQLiteException;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.reader.iterator.SpectrumIterator;
-import fr.profi.mzdb.io.writer.mgf.IsolationWindowPrecursorExtractor_v3_6;
+import fr.profi.mzdb.io.writer.mgf.MgfBoostPrecursorExtractor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
 import fr.profi.mzdb.model.IonMobilityMode;
 import fr.profi.mzdb.model.IonMobilityType;
@@ -25,9 +27,6 @@ import java.util.stream.Collectors;
 public class GeneratedPrecursorsVsIdentificationsTest_NG {
 
   final static Logger logger = LoggerFactory.getLogger(GeneratedPrecursorsVsIdentificationsTest_NG.class);
-  private String CONCORDANT = "concordant";
-  private String UP_QX = "up QX";
-  private String UP_MZDB = "up mzdb";
 
   private Metric metric = new Metric("GeneratedPrecursorsVsIdentificationsTest");
 
@@ -37,8 +36,11 @@ public class GeneratedPrecursorsVsIdentificationsTest_NG {
     try {
       float mzTol = 10.0f;
 
+      final Config config = ConfigFactory.load();
+      logger.info("config max charge =  " + config.getInt("maxIsotopicChargeState"));
+
+
       List<Identification_NG> idents = Identification_NG.fromFile(IdentifiedPrecursorsIsotopesTest_NG.class.getResource("/run_2790_v3.6_NG.csv").getFile());
-      logger.info("nb identifications = {}", idents.size());
       Map<Integer, List<Identification_NG>> identsByScan = idents.stream().collect(Collectors.groupingBy(i -> i.scan));
 
       HashSet<Integer> matches = new HashSet<>();
@@ -49,7 +51,7 @@ public class GeneratedPrecursorsVsIdentificationsTest_NG {
       mzDbReader.enableScanListLoading();
 
       final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
-      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol,(ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS));
+      MgfBoostPrecursorExtractor precComputer = new MgfBoostPrecursorExtractor(mzTol,(ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS), true, true, 1, 0.2f);
 
       logger.info("nb identifications = {}", idents.size());
       logger.info("nb MS2 scans = {}", mzDbReader.getSpectraCount(2));
@@ -96,6 +98,9 @@ public class GeneratedPrecursorsVsIdentificationsTest_NG {
           final Optional<MgfPrecursor> matching = Arrays.stream(mgfPrecursors).filter(prec -> (ident.bestCharge == prec.getCharge()) && (Math.abs(1e6 * (ident.bestMoz - prec.getPrecMz()) / prec.getPrecMz()) < mzTol)).findFirst();
           if (!matching.isPresent()) {
             metric.incr("lost_match");
+            if (ident.bestTargetCount > 0) {
+              metric.incr("lost_match.was_target");
+            }
 
           } else {
             // for matched identifications, count how many precursors are generated

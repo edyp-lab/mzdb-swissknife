@@ -2,7 +2,7 @@ package fr.profi.mzknife.mgf;
 
 import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.mzdb.MzDbReader;
-import fr.profi.mzdb.io.writer.mgf.IsolationWindowPrecursorExtractor_v3_6;
+import fr.profi.mzdb.io.writer.mgf.MgfBoostPrecursorExtractor;
 import fr.profi.mzdb.model.IonMobilityMode;
 import fr.profi.mzdb.model.IonMobilityType;
 import fr.profi.mzdb.model.SpectrumHeader;
@@ -57,7 +57,7 @@ public class IdentifiedPrecursorsIsotopesTest_NG {
       mzDbReader.enableScanListLoading();
 
       final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
-      IsolationWindowPrecursorExtractor_v3_6 precComputer = new IsolationWindowPrecursorExtractor_v3_6(mzTol,(ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS));
+      MgfBoostPrecursorExtractor precComputer = new MgfBoostPrecursorExtractor(mzTol,(ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS), true, true, 1, 0.2f);
 
       logger.info("nb identifications = {}", idents.size());
       logger.info("nb MS2 scans = {}", mzDbReader.getSpectraCount(2));

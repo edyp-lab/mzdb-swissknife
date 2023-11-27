@@ -41,6 +41,29 @@ public class MGFProcessingTest {
   }
 
   @Test
+  public void pCleanTestOut() {
+    File fSrc =new File("C:\\Local\\bruley\\Tests\\MGF\\pClean\\GKVPMNIVAQR.mgf");
+    File fDest = new File(fSrc.getParent(),destFilename);
+
+    try {
+
+      PCleanProcessor pCleanProcessor = new PCleanProcessor(fSrc, fDest, "");
+      pCleanProcessor.setPCleanParameters(false, false, false, false, false, true, true, false, true);
+      JSpectrum.setImmoniumIons();
+      DeltaMassDB.consider2aa = true;
+      Config.ms2tol = 0.5;
+
+      pCleanProcessor.rewriteMGF();
+      testFile(fDest);
+
+    } catch (IOException | InvalidMGFFormatException e) {
+      Assert.fail("MzDB reader instantiation exception " + e.getMessage() + " for " + srcFilename);
+    } finally {
+      cleanupFile(fDest);
+    }
+  }
+
+  @Test
   public void pCleanTMTTest() {
     File fSrc =new File(MGFProcessingTest.class.getResource(srcTMTFilename).getFile());
     File fDest = new File(fSrc.getParent(),destFilename);

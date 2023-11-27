@@ -18,13 +18,13 @@ To display the list of commands (and their parameters) type:\
 To create an MGF file from a Label Free acquisition run named `HF2_020258` using the `mgf_boost` method but without pClean process on MS2 fragments use the following command: 
 
 ```
-run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost_v3.6 -mzdb HF2_020258.mzdb -o HF2_020258_mzdb_3.6_v2.mgf
+run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost -mzdb HF2_020258.mzdb -o HF2_020258_mzdb_3.6_v2.mgf
 ```
 
 or with pClean enabled : 
 
 ```
-run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost_v3.6 -pClean -mzdb HF2_020258.mzdb -o HF2_020258_mzdb_3.6_pclean_v2.mgf
+run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost -pClean -mzdb HF2_020258.mzdb -o HF2_020258_mzdb_3.6_pclean_v2.mgf
 ```
 
 
@@ -32,7 +32,7 @@ run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost_v3.6 -pClean -mzdb H
 To create an MGF file from a TMT 6 plex experiment using pClean: 
 
 ```
-run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost_v3.6 -pClean -pLabelMethod TMT6plex -mzdb HF2_020259.mzdb -o HF2_020256_mzdb_3.6_pcleanTMT_v2.mgf
+run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost -pClean -pLabelMethod TMT6plex -mzdb HF2_020259.mzdb -o HF2_020256_mzdb_3.6_pcleanTMT_v2.mgf
 ```
 
 

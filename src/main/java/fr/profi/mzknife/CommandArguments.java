@@ -136,7 +136,7 @@ public class CommandArguments {
     @Parameter(names = {"-ms", "--ms_level"}, description = "the MS level to export", required = false)
     public Integer msLevel= 2;
 
-    @Parameter(names = {"-precmz", "--precursor_mz"}, description = "must be on of 'main_precursor_mz, selected_ion_mz, refined, refined_thermo, isolation_window_extracted, mgf_boost_v3.6'", required = false)
+    @Parameter(names = {"-precmz", "--precursor_mz"}, description = "must be on of 'main_precursor_mz, selected_ion_mz, refined, refined_thermo, isolation_window_extracted, mgf_boost'", required = false)
     public String precMzComputation = "main_precursor_mz";
 
     @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for precursor m/z value definition", required = false)
@@ -159,6 +159,18 @@ public class CommandArguments {
 
     @Parameter(names = {"-da", "--dump_annotations"}, description = "Dump precursor computer Annotations for statistics purposes", required = false)
     public Boolean dAnnot = false;
+
+    @Parameter(names = {"-header", "--ms2_header"}, description = "[mgf_boost] Allow precursor detection from MS2 header", arity = 1, required = false)
+    public Boolean useHeader = true;
+
+    @Parameter(names = {"-sw", "--selection_window"}, description = "[mgf_boost] Allow precursors detection from selection window content", arity = 1, required = false)
+    public Boolean useSelectionWindow = true;
+
+    @Parameter(names = {"-sw_m", "--sw_max_precursors"}, description = "[mgf_boost] Maximum number of precursors extracted from the selection window", required = false)
+    public Integer swMaxPrecursorsCount = 1;
+
+    @Parameter(names = {"-sw_t", "--sw_threshold"}, description = "[mgf_boost] Intensity threshold to consider peaks from the selection window (percentage of the max peak of the selection window)", required = false)
+    public Float swIntensityThreshold = 0.2f;
 
     @Parameter(names = "--help", help = true)
     public boolean help;

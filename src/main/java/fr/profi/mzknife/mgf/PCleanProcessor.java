@@ -33,6 +33,16 @@ public class PCleanProcessor extends MGFRewriter implements ISpectrumProcessor {
     setPCleanParameters(true, true, true, false, false, true, true, false, true);
   }
 
+  @Override
+  public String getMethodName() {
+    return "pClean";
+  }
+
+  @Override
+  public String getMethodVersion() {
+    return "1.0";
+  }
+
   private void setLabelMethod(String method) {
     if ((method != null) && !method.isEmpty()) {
       labelMethodName = Optional.of(method);

@@ -3,16 +3,12 @@ package fr.profi.mzknife.mzdb;
 import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.mzdb.BBSizes;
 import fr.profi.mzdb.MzDbReader;
-import fr.profi.mzdb.model.MzDBMetaData;
 import fr.profi.mzdb.db.model.SharedParamTree;
-import fr.profi.mzdb.model.SpectrumMetaData;
 import fr.profi.mzdb.db.model.params.param.CVParam;
 import fr.profi.mzdb.db.model.params.param.UserText;
 import fr.profi.mzdb.io.util.MzDBUtil;
 import fr.profi.mzdb.io.writer.MzDBWriter;
-import fr.profi.mzdb.model.AcquisitionMode;
-import fr.profi.mzdb.model.Spectrum;
-import fr.profi.mzdb.model.SpectrumHeader;
+import fr.profi.mzdb.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

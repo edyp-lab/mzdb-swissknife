@@ -2,6 +2,8 @@ package fr.profi.mzknife;
 
 import com.almworks.sqlite4java.SQLiteException;
 import com.beust.jcommander.ParameterException;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.writer.mgf.*;
 import fr.profi.mzdb.model.IonMobilityMode;
@@ -10,14 +12,13 @@ import fr.profi.mzknife.mgf.PCleanProcessor;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
 import fr.profi.mzknife.mzdb.MzDBSplitter;
 import fr.profi.mzknife.util.AbstractProcessing;
+import fr.profi.mzknife.util.PrecursorComputerWrapper;
 import org.apache.commons.lang3.builder.StandardToStringStyle;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -114,6 +115,8 @@ public class MzDbProcessing extends AbstractProcessing {
 
   public static void mzdbcreateMgf(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand) throws SQLiteException, IOException {
 
+    final Config config = ConfigFactory.load();
+
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);
 
@@ -136,6 +139,10 @@ public class MzDbProcessing extends AbstractProcessing {
     if(pCleanConfig != null){
       comments.addAll(pCleanConfig.getPCleanConfigTemplate().stringifyParametersList());
     }
+    comments.add("precMzComputation.description="+precursorComputation.getMethodName()+" - version "+precursorComputation.getMethodVersion());
+    comments.add("input.mzdb.format.version="+mzDbReader.getModelVersion());
+    comments.add("input.mzdb.converter.version="+mzDbReader.getPwizMzDbVersion());
+
     comments.add("generated on "+ DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())+" by "+System.getProperty("user.name"));
 
     writer.setHeaderComments(comments);
@@ -151,15 +158,27 @@ public class MzDbProcessing extends AbstractProcessing {
     } else if (mzDBCreateMgfCommand.precMzComputation.equals("isolation_window_extracted")) {
       // specif precursor method (isolation_window_extracted)
       precursorComputation = new IsolationWindowPrecursorExtractor(mzDBCreateMgfCommand.mzTolPPM);
-    } else if (mzDBCreateMgfCommand.precMzComputation.equals("mgf_boost_v3.6")) {
-      // specif precursor method (mgfBoost v 3.6)
-      precursorComputation =  new IsolationWindowPrecursorExtractor_v3_6(mzDBCreateMgfCommand.mzTolPPM, hasIonMobility);
-//    } else if (mzDBCreateMgfCommand.precMzComputation.equals("isolation_window_extracted_v3.7")) {
-//      IPrecursorComputation precComputer = new IsolationWindowPrecursorExtractor_v3_7(mzDBCreateMgfCommand.mzTolPPM);
-//      writer.write(mzDBCreateMgfCommand.outputFile, precComputer, specProcessor, mzDBCreateMgfCommand.intensityCutoff, mzDBCreateMgfCommand.exportProlineTitle);
+    } else if (mzDBCreateMgfCommand.precMzComputation.equals("mgf_boost")) {
+      // specif precursor method (mgfBoost)
+      precursorComputation =  new MgfBoostPrecursorExtractor(mzDBCreateMgfCommand.mzTolPPM, hasIonMobility, mzDBCreateMgfCommand.useHeader, mzDBCreateMgfCommand.useSelectionWindow, mzDBCreateMgfCommand.swMaxPrecursorsCount, mzDBCreateMgfCommand.swIntensityThreshold);
     } else {
       throw new IllegalArgumentException("Can't create the MGF file, invalid precursor m/z computation method");
     }
+
+    if(mzDBCreateMgfCommand.dAnnot) {
+      try {
+
+        final BufferedWriter annotationWriter = new BufferedWriter(new FileWriter(mzDBCreateMgfCommand.outputFile+".annot"));
+        PrecursorComputerWrapper wrapper = new PrecursorComputerWrapper(precursorComputation, annotationWriter);
+        annotationWriter.write(Arrays.stream(wrapper.getAnnotations()).collect(Collectors.joining(wrapper.getDelimiter())));
+        annotationWriter.newLine();
+        precursorComputation = wrapper;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+
     return precursorComputation;
   }
 
