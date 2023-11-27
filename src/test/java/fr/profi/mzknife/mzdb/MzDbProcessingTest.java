@@ -56,7 +56,7 @@ public class MzDbProcessingTest {
 
       MgfWriter writer = new MgfWriter(fSrc.getAbsolutePath(), 2);
 
-      IPrecursorComputation precComputer = new IsolationWindowPrecursorExtractor_v3_6(10.0f, false);
+      IPrecursorComputation precComputer = new MgfBoostPrecursorExtractor(10.0f, false, true, true, 1, 0.2f);
       writer.write(fDest.getAbsolutePath(), precComputer, new DefaultSpectrumProcessor(), 0.0f, true);
 
       testFile(fDest);
@@ -82,7 +82,7 @@ public class MzDbProcessingTest {
 
       MgfWriter writer = new MgfWriter(fSrc.getAbsolutePath(), 2);
 
-      IPrecursorComputation precComputer = new IsolationWindowPrecursorExtractor_v3_6(10.0f, false);
+      IPrecursorComputation precComputer = new MgfBoostPrecursorExtractor(10.0f, false, true, true, 1, 0.2f);
       writer.write(fDest.getAbsolutePath(), precComputer, new PCleanProcessor(""), 0.0f, true);
 
       testFile(fDest);
