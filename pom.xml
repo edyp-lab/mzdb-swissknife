@@ -12,7 +12,7 @@
 
     <groupId>fr.profi</groupId>
     <artifactId>mzdb-swissknife</artifactId>
-    <version>1.1.2-SNAPSHOT</version>
+    <version>1.1.3-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
@@ -202,7 +202,7 @@
             <artifactId>jdk</artifactId>
             <version>17.0.3.1</version>
             <type>zip</type>
-            <classifier>windows-x64</classifier>
+            <classifier>${os.classifier}</classifier>
         </dependency>
 
     </dependencies>
@@ -380,4 +380,23 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>windows-x64</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <os.classifier>windows-x64</os.classifier>
+            </properties>
+        </profile>
+        <profile>
+            <id>linux-x64</id>
+            <properties>
+                <os.classifier>linux-x64</os.classifier>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>
