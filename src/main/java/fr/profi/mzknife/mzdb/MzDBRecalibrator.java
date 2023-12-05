@@ -47,7 +47,7 @@ public class MzDBRecalibrator {
       MzDBMetaData mzDbMetaData = MzDBUtil.createMzDbMetaData(m_srcReader);
       AcquisitionMode srcAcqMode = m_srcReader.getAcquisitionMode();
       boolean isDIA = (srcAcqMode != null && srcAcqMode.equals(fr.profi.mzdb.model.AcquisitionMode.SWATH));
-      writer = new MzDBWriter(m_dstFile, mzDbMetaData, defaultBBsize, isDIA);
+      writer = new MzDBWriter(m_dstFile, false, mzDbMetaData, defaultBBsize, isDIA);
       writer.initialize();
 
       SpectrumHeader[] headers = m_srcReader.getSpectrumHeaders();

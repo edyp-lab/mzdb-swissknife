@@ -57,7 +57,7 @@ public class Timstof2MzdbExt extends Timstof2Mzdb {
       BBSizes defaultBBsize = new BBSizes(5, 10000, 15, 0);
 
       MzDBMetaData mzDbMetaData =  createMzDbMetaData();
-      writer = new MzDBWriter(outFile, mzDbMetaData, /*newNBbSize*/ defaultBBsize, false);
+      writer = new MzDBWriter(outFile, false, mzDbMetaData, /*newNBbSize*/ defaultBBsize, false);
       writer.initialize();
 
       int spId = 1; //Spectrum Index start at 1

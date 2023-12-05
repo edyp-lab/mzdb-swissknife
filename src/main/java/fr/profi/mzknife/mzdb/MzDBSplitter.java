@@ -170,7 +170,7 @@ public class MzDBSplitter {
         for (String nextCV : cvPrefix) {
           File f = getOutFile(nextCV);
           m_outputMzdbFiles.add(f);
-          MzDBWriter writer = new MzDBWriter(f, mzDbMetaData, defaultBBsize, isDIA);
+          MzDBWriter writer = new MzDBWriter(f, false, mzDbMetaData, defaultBBsize, isDIA);
           writer.initialize();
           writerPerCV.put(nextCV, writer);
         }
