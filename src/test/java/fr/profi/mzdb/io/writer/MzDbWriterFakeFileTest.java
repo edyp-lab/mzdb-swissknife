@@ -67,7 +67,7 @@ public class MzDbWriterFakeFileTest {
     try {
 
       MzDBMetaData metaData = createFakeMzDbMetaData();
-      mzDbWriter = new MzDBWriter(fDest, metaData, BB_SIZES,false);
+      mzDbWriter = new MzDBWriter(fDest, false, metaData, BB_SIZES,false);
       mzDbWriter.initialize();
 
       for(int i = 1 ; i <= 200 ; i++) {

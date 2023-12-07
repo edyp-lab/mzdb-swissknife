@@ -88,7 +88,7 @@ public class MzDbWriterTest {
     try {
 
       MzDBMetaData metaData = MzDBUtil.createMzDbMetaData(mzDb);
-      mzDbWriter = new MzDBWriter(fDest, metaData, mzDb.getBBSizes(),false);
+      mzDbWriter = new MzDBWriter(fDest, false, metaData, mzDb.getBBSizes(),false);
       mzDbWriter.initialize();
 
       int c = mzDb.getSpectraCount();

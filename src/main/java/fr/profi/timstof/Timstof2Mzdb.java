@@ -103,7 +103,7 @@ public class Timstof2Mzdb {
 
         ParamTree pt = new ParamTree();
         List<UserParam> ups = new ArrayList<>();
-        ups.add(new UserParam("", "", "origin_file_format", "Timstof Brucker","xsd:string"));
+        ups.add(new UserParam(  "origin_file_format", "Timstof Brucker","xsd:string", null));
         pt.setUserParams(ups);
         int currentTime = Long.valueOf(System.currentTimeMillis()).intValue();
         MzDbHeader mzdbHeader = new MzDbHeader("0.7", currentTime,  pt, null);
@@ -151,6 +151,7 @@ public class Timstof2Mzdb {
             Software soft = new Software(indexSoft++,name,version, new ParamTree());
             softList.add(soft);
         }
+        //Warning : if a change to software entry is done, it should be taken into account in mzdbReader  (init / getPwizVersion...)
         ProcessingMethod pm = new ProcessingMethod(1,processMethodParamTree, 0,"TimsTof_2_mzdb_conversion" , indexSoft);
         pmList.add(pm);
         softList.add( new Software(indexSoft++,"ttofConverter","0.1", new ParamTree()));
@@ -192,8 +193,6 @@ public class Timstof2Mzdb {
         runSharedParamTree.setSchemaName("IonMobilityParams");
         List<UserText> userTexts = new ArrayList<>();
         UserText userText = new UserText();
-        userText.setAccession("-1");
-        userText.setCvRef("none");
         userText.setType("xsd:string");
         userText.setName("ion_mobility_indexes");
         final List<Pair<Integer, Double>> ionMobilityIndexes = m_ttReader.getIonMobilityIndexes(m_fileHdl);
@@ -261,7 +260,7 @@ public class Timstof2Mzdb {
             BBSizes defaultBBsize = new BBSizes(5, 10000, 15, 0);
 
             MzDBMetaData mzDbMetaData =  createMzDbMetaData();
-            writer = new MzDBWriter(outFile, mzDbMetaData, /*newNBbSize*/ defaultBBsize, false);
+            writer = new MzDBWriter(outFile, false, mzDbMetaData, /*newNBbSize*/ defaultBBsize, false);
             writer.initialize();
 
             int spId = 1; //Spectrum Index start at 1
