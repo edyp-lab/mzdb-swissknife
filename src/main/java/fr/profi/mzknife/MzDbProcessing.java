@@ -5,6 +5,7 @@ import com.beust.jcommander.ParameterException;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import fr.profi.mzdb.MzDbReader;
+import fr.profi.mzdb.db.model.Software;
 import fr.profi.mzdb.io.writer.mgf.*;
 import fr.profi.mzdb.model.IonMobilityMode;
 import fr.profi.mzdb.model.IonMobilityType;
@@ -141,7 +142,11 @@ public class MzDbProcessing extends AbstractProcessing {
     }
     comments.add("precMzComputation.description="+precursorComputation.getMethodName()+" - version "+precursorComputation.getMethodVersion());
     comments.add("input.mzdb.format.version="+mzDbReader.getModelVersion());
-    comments.add("input.mzdb.converter.version="+mzDbReader.getPwizMzDbVersion());
+    Software soft = mzDbReader.getMzdbConverter();
+    if(soft!=null) {
+      comments.add("input.mzdb.converter.software=" + soft.getName());
+      comments.add("input.mzdb.converter.version=" + soft.getVersion());
+    }
 
     comments.add("generated on "+ DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())+" by "+System.getProperty("user.name"));
 
