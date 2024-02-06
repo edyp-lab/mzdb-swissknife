@@ -124,10 +124,11 @@ public class CommandArguments {
   }
 
 
-  @Parameters(commandNames =  {CREATE_MGF_COMMAND_NAME}, commandDescription = "Creates an MGF file from a mzDB file.", separators = "=")
+  @Parameters(commandNames =  {CREATE_MGF_COMMAND_NAME}, commandDescription = "Creates an MGF file from a mzDB file. Options preceded by [mgf_boost] are only available " +
+          "if the precursor_mz method is mgf_boost. ", separators = "=")
   public static class MzDBCreateMgfCommand {
 
-    @Parameter(names = {"-mzdb", "--mzdb_file_path"}, description = "mzDB file to perform extraction", required = true)
+    @Parameter(names = {"-mzdb", "--mzdb_file_path"}, description = "mzDB file to perform peaklist extraction", required = true)
     public String mzdbFile;
 
     @Parameter(names = {"-o", "--output_file_path"}, description = "mgf output file path", required = true)
@@ -136,41 +137,50 @@ public class CommandArguments {
     @Parameter(names = {"-ms", "--ms_level"}, description = "the MS level to export", required = false)
     public Integer msLevel= 2;
 
-    @Parameter(names = {"-precmz", "--precursor_mz"}, description = "must be on of 'main_precursor_mz, selected_ion_mz, refined, refined_thermo, isolation_window_extracted, mgf_boost'", required = false)
+    @Parameter(names = {"-precmz", "--precursor_mz"}, description = "the precursor computation method used : 'main_precursor_mz, selected_ion_mz, refined, refined_thermo, isolation_window_extracted, mgf_boost'.", required = false)
     public String precMzComputation = "main_precursor_mz";
 
-    @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for precursor m/z value definition", required = false)
+    @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for precursor m/z value definition.", required = false)
     public Float mzTolPPM = 20.0f;
 
-    @Parameter(names = {"-cutoff", "--intensity_cutoff"}, description = "optional intensity cutoff to use", required = false)
+    @Parameter(names = {"-cutoff", "--intensity_cutoff"}, description = "optional intensity cutoff.", required = false)
     public Float intensityCutoff = 0.0f;
 
-    @Parameter(names = {"-ptitle", "--proline_title"}, description = "export TITLE using the Proline convention", required = false)
+    @Parameter(names = {"-ptitle", "--proline_title"}, description = "export spectrum 'TITLE' line using the Proline convention.", required = false)
     public Boolean exportProlineTitle= false;
 
-    @Parameter(names = {"-pClean", "--pClean_ms2_processing"}, description = "Apply pClean to MS2 spectra (pre-configured module2)", required = false)
+    @Parameter(names = {"-pClean", "--pClean_ms2_processing"}, description = "Apply pClean to MS2 spectra (pre-configured module2).", required = false)
     public Boolean pClean = false;
 
-    @Parameter(names = {"-pLabelMethod", "--pClean_label_method"}, description = "Apply pClean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX)", required = false)
+    @Parameter(names = {"-pLabelMethod", "--pClean_label_method"}, description = "Apply pClean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX).", required = false)
     public String pCleanLabelMethodName = "";
 
-    @Parameter(names = {"-pConfig" , "--pClean_config_template"}, description = "PClean config template to use. Mandatory if -pClean is specified (LabelFree, XLink or TMTLabelling)", converter = PCleanConfigConverter.class, required = false)
+    @Parameter(names = {"-pConfig" , "--pClean_config_template"}, description = "PClean config template to use. Mandatory if -pClean is specified (LabelFree, XLink or TMTLabelling).", converter = PCleanConfigConverter.class, required = false)
     public PCleanConfig pCleanConfig;
 
-    @Parameter(names = {"-da", "--dump_annotations"}, description = "Dump precursor computer Annotations for statistics purposes", required = false)
+    @Parameter(names = {"-da", "--dump_annotations"}, description = "Dump precursor computer annotation's in a separate dump file for statistical analyses purposes.", required = false)
     public Boolean dAnnot = false;
 
-    @Parameter(names = {"-header", "--ms2_header"}, description = "[mgf_boost] Allow precursor detection from MS2 header", arity = 1, required = false)
+    @Parameter(names = {"-header", "--ms2_header"}, description = "[mgf_boost] Allow precursor detection from the MS2 header.", arity = 1, required = false)
     public Boolean useHeader = true;
 
     @Parameter(names = {"-sw", "--selection_window"}, description = "[mgf_boost] Allow precursors detection from selection window content", arity = 1, required = false)
     public Boolean useSelectionWindow = true;
 
-    @Parameter(names = {"-sw_m", "--sw_max_precursors"}, description = "[mgf_boost] Maximum number of precursors extracted from the selection window", required = false)
+    @Parameter(names = {"-sw_m", "--sw_max_precursors"}, description = "[mgf_boost] Maximum number of precursors extracted from the selection window if selection_window option is true.", required = false)
     public Integer swMaxPrecursorsCount = 1;
 
-    @Parameter(names = {"-sw_t", "--sw_threshold"}, description = "[mgf_boost] Intensity threshold to consider peaks from the selection window (percentage of the max peak of the selection window)", required = false)
+    @Parameter(names = {"-sw_t", "--sw_threshold"}, description = "[mgf_boost] Intensity threshold to consider peaks from the selection window (percentage of the max peak of the selection window).", required = false)
     public Float swIntensityThreshold = 0.2f;
+
+    @Parameter(names = {"-pif_t", "--pif_threshold"}, description = "[mgf_boost] Minimum PIF (Precursor Ion Fraction) value used to post-filter generated precursors (only precursors with a PIF value larger than or equal to the threshold are retained)", required = false)
+    public Double pifThreshold = 0.125;
+
+    @Parameter(names = {"-rk_t", "--rank_threshold"}, description = "[mgf_boost] Maximum peak intensity rank value used to post-filter generated precursors (only precursors with a rank value less than or equal to the threshold are retained).", required = false)
+    public Integer rankThreshold = 2;
+
+    @Parameter(names = {"-mss", "--ms1_scan_selector"}, description = "[mgf_boost] MS1 scan selector mode. Controls the MS1 scan from which precursors are detected : MASTER_SCAN (use the MS1 scan referenced as the 'master scan' if available), SAME_CYCLE (use the first preceding MS1 scan), NEAREST (use the MS1 scan nearest to the MS2 event), ALL (use all scans)", required = false)
+    public ScanSelectorMode scanSelectorMode = ScanSelectorMode.MASTER_SCAN;
 
     @Parameter(names = "--help", help = true)
     public boolean help;
@@ -281,4 +291,7 @@ public class CommandArguments {
     }
   }
 
+  public enum ScanSelectorMode {
+    MASTER_SCAN, SAME_CYCLE, NEAREST, ALL;
+  }
 }

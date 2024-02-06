@@ -5,8 +5,8 @@ import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.reader.iterator.SpectrumIterator;
 import fr.profi.mzdb.io.writer.mgf.MgfBoostPrecursorExtractor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
+import fr.profi.mzdb.io.writer.mgf.ScanSelectorModes;
 import fr.profi.mzdb.model.IonMobilityMode;
-import fr.profi.mzdb.model.IonMobilityType;
 import fr.profi.mzdb.model.SpectrumHeader;
 import fr.profi.util.metrics.Metric;
 import org.junit.Ignore;
@@ -49,7 +49,7 @@ public class GeneratedPrecursorsVsIdentificationsTest {
       mzDbReader.enableScanListLoading();
 
       final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
-      MgfBoostPrecursorExtractor precComputer = new MgfBoostPrecursorExtractor(mzTol, (ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS), true, true, 1, 0.2f);
+      MgfBoostPrecursorExtractor precComputer = new MgfBoostPrecursorExtractor(mzTol, true, true, 1, 0.2f, ScanSelectorModes.SAME_CYCLE(), 0.0, 100);
 
       logger.info("nb identifications = {}", idents.size());
       logger.info("nb MS2 scans = {}", mzDbReader.getSpectraCount(2));

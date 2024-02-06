@@ -36,7 +36,6 @@ run.bat mzdb create_mgf -mztol 10 -ptitle -precmz mgf_boost -pClean -pLabelMetho
 ```
 
 
-
 ### MGF commands examples
 
 to run pClean with the default parameters on the `HF2_020258_mzdb_3.6_v2.mgf` file : 

@@ -7,8 +7,6 @@ import com.typesafe.config.ConfigFactory;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.Software;
 import fr.profi.mzdb.io.writer.mgf.*;
-import fr.profi.mzdb.model.IonMobilityMode;
-import fr.profi.mzdb.model.IonMobilityType;
 import fr.profi.mzknife.mgf.PCleanProcessor;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
 import fr.profi.mzknife.mzdb.MzDBSplitter;
@@ -18,6 +16,7 @@ import org.apache.commons.lang3.builder.StandardToStringStyle;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Enumeration;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -124,14 +123,13 @@ public class MzDbProcessing extends AbstractProcessing {
     MgfWriter writer = new MgfWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
 
     MzDbReader mzDbReader = writer.getMzDbReader();
-    final IonMobilityMode ionMobilityMode = mzDbReader.getIonMobilityMode();
 
     // --- Get and verify parameters for pClean (they should be consistent).
     // --- Define SpectrumProcessor to use and configure it
     ISpectrumProcessor specProcessor = createSpectrumProcessor(mzDBCreateMgfCommand);
 
     // --- Define which PrecursorComputation method to use.
-    IPrecursorComputation precursorComputation = createPrecursorComputation(mzDBCreateMgfCommand, (ionMobilityMode != null && ionMobilityMode.getIonMobilityMode() == IonMobilityType.FAIMS));
+    IPrecursorComputation precursorComputation = createPrecursorComputation(mzDBCreateMgfCommand);
 
     //Call writer to create mgf
     String s = ToStringBuilder.reflectionToString(mzDBCreateMgfCommand, style);
@@ -154,7 +152,7 @@ public class MzDbProcessing extends AbstractProcessing {
     writer.write(mzDBCreateMgfCommand.outputFile, precursorComputation, specProcessor, mzDBCreateMgfCommand.intensityCutoff, mzDBCreateMgfCommand.exportProlineTitle);
   }
 
-  private static IPrecursorComputation createPrecursorComputation(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand, Boolean hasIonMobility) {
+  private static IPrecursorComputation createPrecursorComputation(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand) {
     IPrecursorComputation precursorComputation;
     Optional<PrecursorMzComputationEnum> precCompEnum = Arrays.stream(PrecursorMzComputationEnum.values()).filter(v -> v.name().equalsIgnoreCase(mzDBCreateMgfCommand.precMzComputation.trim())).findFirst();
     if (precCompEnum.isPresent()) {
@@ -165,7 +163,15 @@ public class MzDbProcessing extends AbstractProcessing {
       precursorComputation = new IsolationWindowPrecursorExtractor(mzDBCreateMgfCommand.mzTolPPM);
     } else if (mzDBCreateMgfCommand.precMzComputation.equals("mgf_boost")) {
       // specif precursor method (mgfBoost)
-      precursorComputation =  new MgfBoostPrecursorExtractor(mzDBCreateMgfCommand.mzTolPPM, hasIonMobility, mzDBCreateMgfCommand.useHeader, mzDBCreateMgfCommand.useSelectionWindow, mzDBCreateMgfCommand.swMaxPrecursorsCount, mzDBCreateMgfCommand.swIntensityThreshold);
+      final Enumeration.Value scanSelector = ScanSelectorModes.withName(mzDBCreateMgfCommand.scanSelectorMode.toString());
+      precursorComputation =  new MgfBoostPrecursorExtractor(mzDBCreateMgfCommand.mzTolPPM,
+                                                             mzDBCreateMgfCommand.useHeader,
+                                                             mzDBCreateMgfCommand.useSelectionWindow,
+                                                             mzDBCreateMgfCommand.swMaxPrecursorsCount,
+                                                             mzDBCreateMgfCommand.swIntensityThreshold,
+                                                             scanSelector,
+                                                             mzDBCreateMgfCommand.pifThreshold,
+                                                             mzDBCreateMgfCommand.rankThreshold);
     } else {
       throw new IllegalArgumentException("Can't create the MGF file, invalid precursor m/z computation method");
     }

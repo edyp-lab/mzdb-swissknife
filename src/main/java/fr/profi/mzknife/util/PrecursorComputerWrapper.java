@@ -19,7 +19,7 @@ public class PrecursorComputerWrapper implements IPrecursorComputation {
   private IPrecursorComputation wrappedPrecComputer;
 
   private String[] precAnnotations = { "mz", "charge", "precursors.count.sw" };
-  private String[] annotations = {"source", "scan.number",  "in.sw", "precursor.intensity.sw", "prediction", "prediction.pattern.score", "rank",  "filtered.peaks.count.sw", "precursor.signal.total.sw", "precursor.signal.max.sw", "precursor.rank.sw" };
+  private String[] annotations = {"source", "mgf.id", "scan.number",  "in.sw", "precursor.intensity.sw", "prediction", "prediction.pattern.score", "rank",  "filtered.peaks.count.sw", "precursor.signal.total.sw", "precursor.signal.max.sw", "precursor.rank.sw" };
   public PrecursorComputerWrapper(IPrecursorComputation wrappedPrecComputer, BufferedWriter annotationWriter) {
     this.wrappedPrecComputer = wrappedPrecComputer;
     this.writer = annotationWriter;
