@@ -69,7 +69,6 @@ public class MzDBSplitter {
     m_fileExtension = extension;
   }
 
-
   public List<File> getOutputMzdbFiles() {
     return m_outputMzdbFiles;
   }

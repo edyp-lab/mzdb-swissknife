@@ -1,8 +1,7 @@
 package fr.profi.mzknife;
 
-import Preprocessing.*;
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.ParameterException;
+import Preprocessing.Config;
+import Preprocessing.DeltaMassDB;
 import fr.profi.mzknife.mgf.*;
 import fr.profi.mzknife.util.AbstractProcessing;
 import fr.profi.mzscope.InvalidMGFFormatException;
@@ -24,12 +23,14 @@ public class MGFProcessing extends AbstractProcessing {
     CommandArguments.MgfCleanerCommand mgfCleanerCommand  = new CommandArguments.MgfCleanerCommand();
     CommandArguments.MgfMergerCommand mgfMergerCommand  = new CommandArguments.MgfMergerCommand();
     CommandArguments.PCleanCommand pCleanCommand = new CommandArguments.PCleanCommand();
+    CommandArguments.MgfMetricsCommand mgfMetricsCommand = new CommandArguments.MgfMetricsCommand();
 
     addCommand(mgfRecalibrateCommand);
     addCommand(mgfFilterCommand);
     addCommand(mgfCleanerCommand);
     addCommand(mgfMergerCommand);
     addCommand(pCleanCommand);
+    addCommand(mgfMetricsCommand);
 
     try {
 
@@ -71,6 +72,12 @@ public class MGFProcessing extends AbstractProcessing {
           pCleanMgf(pCleanCommand);
           break;
 
+        case CommandArguments.MGF_METRICS_COMMAND_NAME:
+          if (mgfMetricsCommand.help)
+            usage();
+
+          computeMgfMetrics(mgfMetricsCommand);
+          break;
         default:
           LOG.warn("Invalid command specified ");
           usage();
@@ -108,9 +115,17 @@ public class MGFProcessing extends AbstractProcessing {
   public static void cleanMgf(CommandArguments.MgfCleanerCommand mgfCleanerCommand) throws InvalidMGFFormatException, IOException {
     File mgfCleanerSrcFile = new File(mgfCleanerCommand.inputFileName);
     File mgfCleanerDstFile = getDestFile(mgfCleanerCommand.outputFileName, ".clean.mgf", mgfCleanerSrcFile);
-    MGFCleaner mgfCleaner = new MGFCleaner(mgfCleanerSrcFile, mgfCleanerDstFile);
+    MGFCleaner mgfCleaner = new MGFCleaner(mgfCleanerSrcFile, mgfCleanerDstFile, mgfCleanerCommand.mzTolPPM);
     mgfCleaner.rewriteMGF();
   }
+
+  public static void computeMgfMetrics(CommandArguments.MgfMetricsCommand mgfMetricsCommand) throws InvalidMGFFormatException, IOException {
+    File srcFile = new File(mgfMetricsCommand.inputFileName);
+    File destFile = getDestFile(mgfMetricsCommand.outputFileName, ".metrics.tsv", srcFile);
+    MGFMetrics mgfMetrics = new MGFMetrics(srcFile, destFile);
+    mgfMetrics.dumpMGFMetrics();
+  }
+
 
   public static void recalibrateMgf(CommandArguments.MgfRecalibrateCommand mgfRecalibrateCommand) throws InvalidMGFFormatException, IOException {
     File mgfRecalSrcFile = new File(mgfRecalibrateCommand.inputFileName);

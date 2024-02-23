@@ -1,5 +1,6 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.chemistry.model.MolecularConstants;
 import fr.profi.ms.model.TheoreticalIsotopePattern;
 import fr.profi.mzdb.algo.DotProductPatternScorer;
 import fr.profi.mzdb.model.SpectrumData;
@@ -11,12 +12,15 @@ import scala.Tuple2;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MGFCleaner extends MGFRewriter {
 
   private final static Logger LOG = LoggerFactory.getLogger(MGFCleaner.class);
 
-  class Peak {
+  private double mzTolPpm = 20.0;
+
+  public static class Peak {
 
     final double mass;
     final double intensity;
@@ -33,18 +37,90 @@ public class MGFCleaner extends MGFRewriter {
       this.index = index;
     }
   }
-  
-  
-  public MGFCleaner(File srcFile, File m_dstFile) throws InvalidMGFFormatException {
+
+
+  public enum IsobaricTag {
+    ITRAQ4PLEX( 144.102063, new double[]{ 114.110679, 115.107714, 116.111069, 117.114424}),
+    ITRAQ8PLEX( 304.205360, new double[]{ 113.107324, 114.110679, 115.107714, 116.111069, 117.114424, 118.111459, 119.114814, 121.121523}),
+    TMT6PLEX(229.162932, new double[]{ 126.1277261, 127.1310809, 128.1344357, 129.1377905, 130.1411453, 131.1381802}),
+    TMT10PLEX(229.162932, new double[]{ 126.1277261, 127.1247610 ,127.1310809, 128.1281158, 128.1344357, 129.1314706, 129.1377905, 130.1348254, 130.1411453, 131.1381802}),
+    TMT11PLEX(229.162932, new double[]{ 126.1277261, 127.1247610 ,127.1310809, 128.1281158, 128.1344357, 129.1314706, 129.1377905, 130.1348254, 130.1411453, 131.1381802, 131.144999 }),
+    TMT16PLEX( 304.207146 , new double[]{ 126.127726, 127.124761, 127.131081, 128.128116, 128.134436, 129.131471, 129.137790, 130.134825, 130.141145, 131.138180, 131.144500, 132.141535, 132.147855, 133.144890, 133.151210, 134.148245}),
+    TMT18PLEX( 304.207146 , new double[]{ 126.127726, 127.124761, 127.131081, 128.128116, 128.134436, 129.131471, 129.137790, 130.134825, 130.141145, 131.138180, 131.144500, 132.141535, 132.147855, 133.144890, 133.151210, 134.148245, 134.154565, 135.151600});
+    public final double[] reporterIons;
+    public final double tagMass;
+
+    IsobaricTag(double mass, double[] reporters) {
+      this.reporterIons = reporters;
+      this.tagMass = mass;
+    }
+
+  }
+
+  // https://www.gpmaw.com/tables/ResMassVal.pdf
+  // https://www.biosyn.com/tew/amino-acid-masses-tables.aspx
+  //
+  public enum ImmoniumIon {
+
+    GLYCINE(30.03438),
+    ALANINE(44.05003),
+    SERINE(60.04494),
+    PROLINE(70.06568),
+    VALINE(72.08133),
+    THREONINE(74.06059),
+    CYSTEINE(76.0221),
+    CARBAMIDOMETHYLATED(133.0436),
+    CARBOXYMETHYLATED(134.0276),
+    ACRYLAMIDE_ADDUCT(147.0772),
+    LEUCINE_ISOLEUCINE(86.09698),
+    ASPARAGINE(87.05584),
+    ASPARAGINE_A1(70.03),
+    ASPARTIC_ACID(88.03986),
+    GLUTAMINE(101.0715),
+    GLUTAMINE_A1(129.10),
+    GLUTAMINE_A2(84.04),
+    GLUTAMINE_A3(56.05),
+    LYSINE(101.1079),
+    LYSINE_2(84.08136),
+    GLUTAMIC_ACID(102.0555),
+    METHIONINE(104.0534),
+    OXIDIZED_METHIONINE(120.0483),
+    HISTIDINE(110.0718),
+    PHENYLALANINE(120.0813),
+    ARGININE(129.114),
+    ARGININE_A1(115.09),
+    ARGININE_A2(112.09),
+    ARGININE_A3(87.09),
+    ARGININE_A4(60.06),
+    TYROSINE(136.0762),
+    TRYPTOPHAN(159.0922),
+    TRYPTOPHAN_A1(132.08),
+    TRYPTOPHAN_A2(130.07);
+    private final double mass;
+
+    ImmoniumIon(double mass) {
+      this.mass = mass;
+    }
+  }
+
+  protected MGFCleaner(double mzTolPpm) {
+    this.mzTolPpm = mzTolPpm;
+  }
+
+  public MGFCleaner(File srcFile, File m_dstFile, double mzTolPpm) throws InvalidMGFFormatException {
     super(srcFile, m_dstFile);
+    this.mzTolPpm = mzTolPpm;
   }
 
   protected MSMSSpectrum getSpectrum2Export(MSMSSpectrum inSpectrum){
 
-    double tolPpm = 20.0;
+    double parentMass = inSpectrum.getPrecursorMz()*inSpectrum.getPrecursorCharge() - inSpectrum.getPrecursorCharge()*MolecularConstants.PROTON_MASS();
     double[] masses = inSpectrum.getMassValues();
     double[] intensities = inSpectrum.getIntensityValues();
     float[] fIntensities = new float[intensities.length];
+
+    List<Double> immoniumIonMasses = Arrays.stream(ImmoniumIon.values()).map(i -> i.mass).sorted().toList();
+
 
     List<Peak> peaks = new ArrayList<>(masses.length);
     List<Peak> result = new ArrayList<>(masses.length);
@@ -60,30 +136,44 @@ public class MGFCleaner extends MGFRewriter {
 
     peaks.sort((o1, o2) -> Double.compare(o2.intensity, o1.intensity));
 
+
+    // Filter immonium Ions
+
     for (int k = 0; k < peaks.size(); k++) {
+
       Peak p = peaks.get(k);
-      if (!p.used) {
-        Tuple2<Object, TheoreticalIsotopePattern> prediction = predictIsotopicPattern(spectrumData, p.mass, tolPpm);
-        if ( (1e6*(prediction._2.monoMz() - p.mass)/p.mass) <= tolPpm ) {
-          float intensity = 0;
-          int charge = prediction._2.charge();
-          for (Tuple2 t : prediction._2.mzAbundancePairs()) {
-            Double mz = (Double) t._1;
-            Float ab = (Float) t._2;
-            int peakIdx = getPeakIndex(masses, mz, tolPpm);
-            if ((peakIdx != -1) && (intensities[peakIdx] <= p.intensity)) {
-              intensity+= intensities[peakIdx];
-              peaksByIndex.get(peakIdx).used = true;
-            } else {
+      if (p.mass < 160) {
+          for (double ionMass : immoniumIonMasses) {
+            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolPpm) {
+              p.used = true;
+              break;
+            } else if (ionMass > p.mass) {
               break;
             }
           }
-          if ( (charge == 1) || (intensity == p.intensity) ) {
-            Peak newPeak = new Peak(p.mass, intensity, p.index);
-            result.add(newPeak);
+      }
+
+      if (!p.used) {
+        IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolPpm, inSpectrum.getPrecursorCharge(), peaksByIndex);
+//        if (patternMatch != null) {
+//          LOG.info("Peak ({}, {}) predicted to ({}, {}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), patternMatch.theoreticalPattern.charge());
+//        }
+        if (patternMatch != null) {
+          int charge = patternMatch.theoreticalPattern.charge();
+          for(Optional<Integer> peakIndex : patternMatch.matchingPeaks) {
+            if (!peakIndex.isEmpty()) {
+              final Peak peak = peaksByIndex.get(peakIndex.get());
+              peak.used = true;
+            }
+          }
+          if (charge == 1) {
+            final Integer peakIdx = patternMatch.matchingPeaks.get(0).get();
+            result.add(new Peak(peaksByIndex.get(peakIdx)));
           } else {
-            Peak newPeak = new Peak(p.mass*charge - (charge-1)*1.00728, intensity, p.index);
-//            LOG.info("Move peak ({},{}) to ({},{})", p.mass, p.intensity, newPeak.mass, newPeak.intensity);
+            final Integer peakIdx = patternMatch.matchingPeaks.get(0).get();
+            Peak monoPeak = peaksByIndex.get(peakIdx);
+            Peak newPeak = new Peak(monoPeak.mass*charge - (charge-1)* MolecularConstants.PROTON_MASS(), monoPeak.intensity, p.index);
+            //LOG.info("Move peak ({},{},{}+) to ({},{}, 1+)", monoPeak.mass, monoPeak.intensity, charge, newPeak.mass, newPeak.intensity);
             result.add(newPeak);
           }
         } else {
@@ -93,7 +183,10 @@ public class MGFCleaner extends MGFRewriter {
       }
     }
 
-    result.sort(Comparator.comparingDouble(o -> o.mass));
+//    result.sort(Comparator.comparingDouble(o -> o.mass));
+
+    result = result.stream().filter( p -> p.mass <= parentMass).sorted(Comparator.comparingDouble(o -> o.mass)).collect(Collectors.toList());
+
     masses = new double[result.size()];
     intensities = new double[result.size()];
     int k = 0;
@@ -107,7 +200,6 @@ public class MGFCleaner extends MGFRewriter {
             inSpectrum.getPrecursorIntensity(),
             inSpectrum.getPrecursorCharge(),
             inSpectrum.getRetentionTime());
-
     inSpectrum.getAnnotations().forEachRemaining(a -> outSpectrum.setAnnotation(a, inSpectrum.getAnnotation(a)));
 
     for(int i = 0; i < masses.length; i++) {
@@ -131,9 +223,83 @@ public class MGFCleaner extends MGFRewriter {
     return resultIdx;
   }
 
-  public static Tuple2<Object, TheoreticalIsotopePattern> predictIsotopicPattern(SpectrumData spectrum, double mz, double ppmTol) {
-    Tuple2<Object, TheoreticalIsotopePattern>[] putativePatterns = DotProductPatternScorer.calcIsotopicPatternHypotheses(spectrum, mz, ppmTol);
-    Tuple2<Object, TheoreticalIsotopePattern> bestPatternHypothese = DotProductPatternScorer.selectBestPatternHypothese(putativePatterns, 0.1);
-    return bestPatternHypothese;
+  public static IsotopicPatternMatch predictIsotopicPattern(SpectrumData spectrum, double mz, double ppmTol, int maxCharge, Map<Integer, Peak> peaksByIndex) {
+
+    List<Tuple2<Object, TheoreticalIsotopePattern>> putativePatterns = new ArrayList<>();
+
+    for (int charge = 1; charge <= maxCharge; charge++) {
+      Tuple2<Object, TheoreticalIsotopePattern>[] patterns = DotProductPatternScorer.calcIsotopicPatternHypothesesFromCharge(spectrum, mz, charge, ppmTol);
+      putativePatterns.addAll(Arrays.asList(patterns));
+    }
+
+    putativePatterns.sort((p1, p2) -> {
+      double s1 =  ((Double)p1._1).doubleValue();
+      double s2 =  ((Double)p2._1).doubleValue();
+      return (s1 == s2) ? (p1._2.charge() - p2._2.charge()) : Double.compare(s1, s2);
+    });
+
+    List<IsotopicPatternMatch> matches = new ArrayList<>(putativePatterns.size());
+
+    for(Tuple2<Object, TheoreticalIsotopePattern> prediction : putativePatterns) {
+      IsotopicPatternMatch patternMatch = new IsotopicPatternMatch((Double)prediction._1, prediction._2, spectrum.getMzList(), ppmTol);
+      matches.add(patternMatch);
+    }
+
+    matches = matches.stream().filter(m -> (m.score < 0.2) &&
+            m.matchingPeaks.get(0).isPresent() && m.matchingPeaks.get(1).isPresent() &&
+            !peaksByIndex.get(m.matchingPeaks.get(0).get()).used &&
+            !peaksByIndex.get(m.matchingPeaks.get(1).get()).used ).collect(Collectors.toList());
+
+    if (matches.size() > 1) {
+      double maxScore = matches.get(0).score;
+      matches = matches.stream().filter(m -> ((maxScore - m.score) < 0.1)).collect(Collectors.toList());
+      if (matches.size() > 1) {
+        int maxMatching = matches.stream().map(m -> m.matchingCount).max(Integer::compareTo).get();
+        matches = matches.stream().filter(m -> m.matchingCount == maxMatching).collect(Collectors.toList());
+      }
+    }
+
+    return matches.isEmpty() ? null : matches.get(0);
   }
+}
+
+
+class IsotopicPatternMatch {
+
+  final double score;
+  final TheoreticalIsotopePattern theoreticalPattern;
+   int matchingCount;
+
+  List<Optional<Integer>> matchingPeaks;
+
+  public IsotopicPatternMatch(double score, TheoreticalIsotopePattern theoreticalPattern) {
+    this.score = score;
+    this.theoreticalPattern = theoreticalPattern;
+  }
+
+  public IsotopicPatternMatch(double score, TheoreticalIsotopePattern theoreticalPattern, List<Optional<Integer>> peaks) {
+    this(score, theoreticalPattern);
+    this.matchingPeaks = peaks;
+    this.matchingCount = (int)peaks.stream().filter(p -> !p.isEmpty()).count();
+  }
+
+  public IsotopicPatternMatch(double score, TheoreticalIsotopePattern theoreticalPattern, double[] masses, double tolPPM) {
+    this(score, theoreticalPattern);
+    // limit to 3 isotopes max
+    List<Optional<Integer>> peaks = new ArrayList<>(3);
+    int count = 0;
+    for (int k = 0; k < 3; k++) {
+      Tuple2<Object, Object> p = theoreticalPattern.mzAbundancePairs()[k];
+      int index = MGFCleaner.getPeakIndex(masses, (Double) p._1, tolPPM);
+      if (index >= 0 && index < masses.length) {
+        peaks.add(Optional.of(index));
+        count++;
+      } else {
+        peaks.add(Optional.empty());
+      }
+    }
+    this.matchingPeaks = peaks;
+    this.matchingCount = count;
+  }
+
 }

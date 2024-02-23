@@ -13,6 +13,10 @@ public class CommandArguments {
   public final static String FILTER_COMMAND_NAME = "filter";
   public final static String CLEAN_COMMAND_NAME = "clean";
   public final static String MERGE_COMMAND_NAME = "merge";
+
+  public final static String MGF_METRICS_COMMAND_NAME = "metrics";
+
+  public final static String MZDB_METRICS_COMMAND_NAME = "metrics";
   public final static String CREATE_MGF_COMMAND_NAME = "create_mgf";
 
   public final static String PCLEAN_COMMAND_NAME = "pclean";
@@ -35,7 +39,7 @@ public class CommandArguments {
     @Parameter(names = {"-ls","--last_scan"}, description = "the last scan where the recalibration is applied", required = true)
     public Long lastScan = Long.MAX_VALUE;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
@@ -59,7 +63,21 @@ public class CommandArguments {
     @Parameter(names = {"-lt","--last_time"}, description = "the retention time (in seconds) at which the recalibration is applied", required = true)
     public Double lastTime = Double.MAX_VALUE;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
+    public boolean help;
+
+  }
+
+  @Parameters(commandNames =  {MZDB_METRICS_COMMAND_NAME}, commandDescription = "Compute some metrics from an mzDB input file.", separators = "=")
+  public static class MzDBMetricsCommand {
+
+    @Parameter(names = {"-i","--input"}, description = "the mzDB input file.", required = true, order = 0)
+    public String inputFileName;
+
+    @Parameter(names = {"-o","--output"}, description = "metrics output file", required = false, order = 1)
+    public String outputFileName;
+
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
@@ -79,7 +97,7 @@ public class CommandArguments {
     @Parameter(names = {"-nz","--exclude-charges"}, description = "Keep Spectrum WITHOUT specified charges (mist with space as separator). If specified, \"charges\" should NOT be specified. ", required = false,  variableArity = true)
     public List<Integer> charges2Ignore;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
@@ -88,13 +106,16 @@ public class CommandArguments {
   @Parameters(commandNames =  {CLEAN_COMMAND_NAME}, commandDescription = "Clean MS/MS fragment peaks of an MGF file.", separators = "=")
   public static class MgfCleanerCommand {
 
-    @Parameter(names = {"-i","--input"}, description = "mgf input file to filter", required = true, order = 0)
+    @Parameter(names = {"-i","--input"}, description = "mgf input file to clean", required = true, order = 0)
     public String inputFileName;
 
-    @Parameter(names = {"-o","--output"}, description = "mgf output file", required = false, order = 1)
+    @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used to detect fragment peaks.", required = false, order = 1)
+    public Float mzTolPPM = 20.0f;
+
+    @Parameter(names = {"-o","--output"}, description = "mgf output file", required = false, order = 2)
     public String outputFileName;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
@@ -118,11 +139,24 @@ public class CommandArguments {
     @Parameter(names = {"-o","--output"}, description = "mgf output file", required = false, order = 3)
     public String outputFileName;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
 
+  @Parameters(commandNames =  {MGF_METRICS_COMMAND_NAME}, commandDescription = "Compute some metrics from an MGF input file.", separators = "=")
+  public static class MgfMetricsCommand {
+
+    @Parameter(names = {"-i","--input"}, description = "the MGF input file.", required = true, order = 0)
+    public String inputFileName;
+
+    @Parameter(names = {"-o","--output"}, description = "metrics output file", required = false, order = 1)
+    public String outputFileName;
+
+    @Parameter(names = {"-h", "--help"}, help = true)
+    public boolean help;
+
+  }
 
   @Parameters(commandNames =  {CREATE_MGF_COMMAND_NAME}, commandDescription = "Creates an MGF file from a mzDB file. Options preceded by [mgf_boost] are only available " +
           "if the precursor_mz method is mgf_boost. ", separators = "=")
@@ -131,7 +165,7 @@ public class CommandArguments {
     @Parameter(names = {"-mzdb", "--mzdb_file_path"}, description = "mzDB file to perform peaklist extraction", required = true)
     public String mzdbFile;
 
-    @Parameter(names = {"-o", "--output_file_path"}, description = "mgf output file path", required = true)
+    @Parameter(names = {"-o", "--output_file_path"}, description = "MGF output file path", required = true)
     public String outputFile = "";
 
     @Parameter(names = {"-ms", "--ms_level"}, description = "the MS level to export", required = false)
@@ -182,7 +216,7 @@ public class CommandArguments {
     @Parameter(names = {"-mss", "--ms1_scan_selector"}, description = "[mgf_boost] MS1 scan selector mode. Controls the MS1 scan from which precursors are detected : MASTER_SCAN (use the MS1 scan referenced as the 'master scan' if available), SAME_CYCLE (use the first preceding MS1 scan), NEAREST (use the MS1 scan nearest to the MS2 event), ALL (use all scans)", required = false)
     public ScanSelectorMode scanSelectorMode = ScanSelectorMode.MASTER_SCAN;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
@@ -193,7 +227,7 @@ public class CommandArguments {
     @Parameter(names = {"-i","--input"}, description = "mzdb input file to recalibrate", required = true, order = 0)
     public String inputFileName;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
@@ -210,7 +244,7 @@ public class CommandArguments {
     @Parameter(names = {"-o","--output"}, description = "the MGF output file", required = true, order = 2)
     public String outputFileName;
 
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
   }
@@ -246,7 +280,7 @@ public class CommandArguments {
     public Boolean largerThanPrecursor = true;
     @Parameter(names = {"-ionsMerge"}, description = "Merge two ions of similar mass", required = false, arity = 1)
     public Boolean ionsMerge = false;
-    @Parameter(names = "--help", help = true)
+    @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
   }
 

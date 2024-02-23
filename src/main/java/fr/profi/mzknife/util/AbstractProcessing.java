@@ -2,7 +2,6 @@ package fr.profi.mzknife.util;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
-import fr.profi.mzknife.CommandArguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +37,8 @@ public class AbstractProcessing {
   }
 
   protected static File getDestFile(String outputFile, String defaultExtension, File inputFile){
-    String inputFileName = inputFile.getName();
-    String dstFilePath = (outputFile != null) ? outputFile : inputFile.getAbsolutePath().substring(0,inputFileName.lastIndexOf('.')) + defaultExtension;
+    String inputFileName = inputFile.getAbsolutePath();
+    String dstFilePath = (outputFile != null) ? outputFile : inputFileName.substring(0,inputFileName.lastIndexOf('.')) + defaultExtension;
     File dstFile = new File(dstFilePath);
     if (dstFile.exists()) {
       LOG.error("Destination file {} already exists, remove it before running rewrite command", dstFile.getAbsolutePath());

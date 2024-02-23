@@ -8,6 +8,7 @@ import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.Software;
 import fr.profi.mzdb.io.writer.mgf.*;
 import fr.profi.mzknife.mgf.PCleanProcessor;
+import fr.profi.mzknife.mzdb.MzDBMetrics;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
 import fr.profi.mzknife.mzdb.MzDBSplitter;
 import fr.profi.mzknife.util.AbstractProcessing;
@@ -44,10 +45,12 @@ public class MzDbProcessing extends AbstractProcessing {
     CommandArguments.MzDBRecalibrateCommand mzDBRecalibrateCommand = new CommandArguments.MzDBRecalibrateCommand();
     CommandArguments.MzDBSplitterCommand mzDBSplitterCommand = new CommandArguments.MzDBSplitterCommand();
     CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand  = new CommandArguments.MzDBCreateMgfCommand();
+    CommandArguments.MzDBMetricsCommand mzDBMetricsCommand = new CommandArguments.MzDBMetricsCommand();
 
     addCommand(mzDBRecalibrateCommand);
     addCommand(mzDBSplitterCommand);
     addCommand(mzDBCreateMgfCommand);
+    addCommand(mzDBMetricsCommand);
 
     try {
 
@@ -75,6 +78,13 @@ public class MzDbProcessing extends AbstractProcessing {
               splitMzdb(mzDBSplitterCommand);
               break;
 
+            case CommandArguments.MZDB_METRICS_COMMAND_NAME:
+              if (mzDBMetricsCommand.help)
+                usage();
+
+              computeMzdbMetrics(mzDBMetricsCommand);
+              break;
+
             default:
               LOG.warn("Invalid command specified ");
               usage();
@@ -95,6 +105,15 @@ public class MzDbProcessing extends AbstractProcessing {
     MzDbReader srcReader = new MzDbReader(mzdbSrcFile, true);
     MzDBRecalibrator mzdbRecalibrator = new MzDBRecalibrator(srcReader, mzdbDstFile);
     mzdbRecalibrator.recalibrate(mzDBRecalibrateCommand.firstScan, mzDBRecalibrateCommand.lastScan, mzDBRecalibrateCommand.deltaMass);
+  }
+
+  public static void computeMzdbMetrics(CommandArguments.MzDBMetricsCommand mzDBMetricsCommand) throws FileNotFoundException, SQLiteException {
+    File mzdbSrcFile = new File(mzDBMetricsCommand.inputFileName);
+    File outputFile = getDestFile(mzDBMetricsCommand.outputFileName, ".metrics.tsv", mzdbSrcFile);
+    LOG.info(" MzDbProcessing " + mzdbSrcFile.getName() + " to " + outputFile.getAbsolutePath());
+    MzDBMetrics metricsComputer = new MzDBMetrics(mzdbSrcFile, outputFile);
+    metricsComputer.computeMetrics();
+
   }
 
   public static void splitMzdb(CommandArguments.MzDBSplitterCommand mzDBSplitterCommand) {
