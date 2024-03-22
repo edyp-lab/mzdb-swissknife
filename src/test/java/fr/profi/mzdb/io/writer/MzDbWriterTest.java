@@ -33,7 +33,7 @@ public class MzDbWriterTest {
 //  private static final int expectedBBCount_OVEMB150205_12 = 3406;
   private static final int expectedBBCount_NEW_OVEMB150205_12 = 2387;
   private static final int expectedCycleCount_OVEMB150205_12 = 158;
-  private static final int expectedRunSliceCount_OVEMB150205_12 = 1001; //Prev value was 161 because tthe reader did not reality count the number of slices;
+  private static final int expectedRunSliceCount_OVEMB150205_12 = 1000; // C'est le dernier id et non pas le compte !
   private static final int expectedSpectrumCount_OVEMB150205_12 = 1193;
   private static final int expectedDataEncodingCount_NEW_OVEMB150205_12 = 2;
   private static final int expectedMaxMSLevel_OVEMB150205_12 = 2;
