@@ -1,9 +1,6 @@
 package fr.profi.mzknife.mgf;
 
-import fr.profi.mzscope.InvalidMGFFormatException;
-import fr.profi.mzscope.MGFConstants;
-import fr.profi.mzscope.MGFReader;
-import fr.profi.mzscope.MSMSSpectrum;
+import fr.profi.mzscope.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,21 +23,22 @@ public class MGFMetrics {
 
   private final static Logger LOG = LoggerFactory.getLogger(MGFMetrics.class);
 
+  private final static double MOZ_THRESHOLD = 136.0;
   protected MGFMetrics() {
     this.m_msmsSpectra = Collections.emptyList();
     this.m_dstFile = null;
   }
 
-  public MGFMetrics(File srcFile, File m_dstFile) throws InvalidMGFFormatException {
+  public MGFMetrics(File srcFile, File dstFile) throws InvalidMGFFormatException {
     MGFReader reader = new MGFReader();
     this.m_msmsSpectra = reader.read(srcFile);
-    this.m_dstFile = m_dstFile;
+    this.m_dstFile = dstFile;
   }
 
   public void dumpMGFMetrics() throws IOException {
 
     BufferedWriter writer = new BufferedWriter(new FileWriter(m_dstFile));
-    String[] columns = { "scan", "precursors_count", "fragment_peaks_count", "charge"};
+    String[] columns = { "scan", "precursors_count", "fragment_peaks_count", "charge", "LH_intensity_ratio"};
 
     writer.write(Arrays.stream(columns).collect(Collectors.joining(DELIMITER)));
     writer.newLine();
@@ -54,8 +52,19 @@ public class MGFMetrics {
       strBuilder.append(entry.getValue().size()).append(DELIMITER);
       final MSMSSpectrum spectrum = entry.getValue().get(0);
       strBuilder.append(spectrum.peaksCount()).append(DELIMITER);
-      strBuilder.append(spectrum.getPrecursorCharge());
+      strBuilder.append(spectrum.getPrecursorCharge()).append(DELIMITER);
 
+      double lowMassRangeIntensity = 0.0;
+      double highMassRangeIntensity = 0.0;
+              
+      for (Peak p : spectrum.getPeaks()) {
+        if (p.getMz() < MOZ_THRESHOLD) {
+          lowMassRangeIntensity = Math.max(p.getIntensity(), lowMassRangeIntensity);
+        } else {
+          highMassRangeIntensity = Math.max(p.getIntensity(), highMassRangeIntensity);
+        }
+      }
+      strBuilder.append(lowMassRangeIntensity/highMassRangeIntensity);
       writer.write(strBuilder.toString());
       writer.newLine();
       writer.flush();

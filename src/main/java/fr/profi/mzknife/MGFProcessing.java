@@ -115,7 +115,18 @@ public class MGFProcessing extends AbstractProcessing {
   public static void cleanMgf(CommandArguments.MgfCleanerCommand mgfCleanerCommand) throws InvalidMGFFormatException, IOException {
     File mgfCleanerSrcFile = new File(mgfCleanerCommand.inputFileName);
     File mgfCleanerDstFile = getDestFile(mgfCleanerCommand.outputFileName, ".clean.mgf", mgfCleanerSrcFile);
-    MGFCleaner mgfCleaner = new MGFCleaner(mgfCleanerSrcFile, mgfCleanerDstFile, mgfCleanerCommand.mzTolPPM);
+    MGFCleaner mgfCleaner = null;
+    if (mgfCleanerCommand.labelingMethodName != null) {
+      try {
+        final MGFCleaner.IsobaricTag isobaricTag = MGFCleaner.IsobaricTag.valueOf(mgfCleanerCommand.labelingMethodName.toUpperCase());
+        mgfCleaner = new MGFCleaner(mgfCleanerSrcFile, mgfCleanerDstFile, mgfCleanerCommand.mzTolPPM, isobaricTag);
+      } catch (IllegalArgumentException iae) {
+        LOG.error("labelling method {} not found");
+        usage();
+      }
+    } else {
+      mgfCleaner = new MGFCleaner(mgfCleanerSrcFile, mgfCleanerDstFile, mgfCleanerCommand.mzTolPPM);
+    }
     mgfCleaner.rewriteMGF();
   }
 

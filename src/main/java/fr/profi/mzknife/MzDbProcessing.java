@@ -2,11 +2,11 @@ package fr.profi.mzknife;
 
 import com.almworks.sqlite4java.SQLiteException;
 import com.beust.jcommander.ParameterException;
-import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.Software;
 import fr.profi.mzdb.io.writer.mgf.*;
+import fr.profi.mzknife.mgf.MGFCleaner;
 import fr.profi.mzknife.mgf.PCleanProcessor;
 import fr.profi.mzknife.mzdb.MzDBMetrics;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
@@ -134,7 +134,7 @@ public class MzDbProcessing extends AbstractProcessing {
 
   public static void mzdbcreateMgf(CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand) throws SQLiteException, IOException {
 
-    final Config config = ConfigFactory.load();
+    ConfigFactory.load();
 
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);
@@ -153,9 +153,14 @@ public class MzDbProcessing extends AbstractProcessing {
     //Call writer to create mgf
     String s = ToStringBuilder.reflectionToString(mzDBCreateMgfCommand, style);
     List<String> comments = Arrays.stream(s.split(("\n"))).collect(Collectors.toList());
-    CommandArguments.PCleanConfig pCleanConfig = mzDBCreateMgfCommand.pCleanConfig;
-    if(pCleanConfig != null){
-      comments.addAll(pCleanConfig.getPCleanConfigTemplate().stringifyParametersList());
+    CommandArguments.CleanConfig cleanConfig = mzDBCreateMgfCommand.cleanConfig;
+    if(cleanConfig != null) {
+      if (mzDBCreateMgfCommand.cleanMethod.equalsIgnoreCase("pClean")) {
+        comments.addAll(cleanConfig.stringifyPCleanParametersList());
+      } else if (mzDBCreateMgfCommand.cleanMethod.equalsIgnoreCase("eClean")) {
+        comments.addAll(cleanConfig.stringifyECleanParametersList());
+      }
+
     }
     comments.add("precMzComputation.description="+precursorComputation.getMethodName()+" - version "+precursorComputation.getMethodVersion());
     comments.add("input.mzdb.format.version="+mzDbReader.getModelVersion());
@@ -214,32 +219,38 @@ public class MzDbProcessing extends AbstractProcessing {
 
   private static ISpectrumProcessor createSpectrumProcessor(CommandArguments.MzDBCreateMgfCommand createMgfCommand){
 
-    CommandArguments.PCleanConfig pCleanConfig = createMgfCommand.pCleanConfig;
-    boolean usePClean = createMgfCommand.pClean;
-    String pCleanMethod = createMgfCommand.pCleanLabelMethodName;
+    CommandArguments.CleanConfig cleanConfig = createMgfCommand.cleanConfig;
+    boolean useClean = !createMgfCommand.cleanMethod.equalsIgnoreCase("None");
+    String cleanLabelMethodName = createMgfCommand.cleanLabelMethodName;
 
     ISpectrumProcessor specProcessor = null;
-    if(usePClean){
-      if(pCleanConfig == null) {
+    if(useClean){
+      if(cleanConfig == null) {
         LOG.error("if pClean usage is specified, the -pConfig parameter should be specified ! ");
         usage();
       } else {
-        switch (pCleanConfig){
+        switch (cleanConfig){
           case XLINK:
           case LABEL_FREE: {
-            if(pCleanMethod != null && !pCleanMethod.isEmpty()) {
-              LOG.warn("Specified pClean method " + pCleanMethod + " will be ignored. It isn't consistent with " + pCleanConfig.getConfigCommandValue());
-              pCleanMethod = "";
+            if(cleanLabelMethodName != null && !cleanLabelMethodName.isEmpty()) {
+              LOG.warn("Specified clean label method " + cleanLabelMethodName + " will be ignored. It isn't consistent with " + cleanConfig.getConfigCommandValue());
+              cleanLabelMethodName = "";
             }
             break;
           }
           case TMT_LABELED:
-            if(pCleanMethod == null || pCleanMethod.isEmpty()) {
-              throw new ParameterException("When using "+pCleanConfig.getConfigCommandValue()+" configuration, you must specify pClean label method using -pLabelMethod");
+            if(cleanLabelMethodName == null || cleanLabelMethodName.isEmpty()) {
+              throw new ParameterException("When using "+ cleanConfig.getConfigCommandValue()+" configuration, you must specify clean label method using -cLabelMethod");
             }
         } //end switch
-        specProcessor = new PCleanProcessor(pCleanMethod);
-        ((PCleanProcessor)specProcessor).setPCleanParameters(pCleanConfig.getPCleanConfigTemplate());
+
+        if ( createMgfCommand.cleanMethod.equalsIgnoreCase("pClean")) {
+          specProcessor = new PCleanProcessor(cleanLabelMethodName);
+          ((PCleanProcessor) specProcessor).setPCleanParameters(cleanConfig.getPCleanConfigTemplate());
+        } else if ( createMgfCommand.cleanMethod.equalsIgnoreCase("eClean")) {
+          specProcessor = new MGFCleaner(20.0, cleanLabelMethodName);
+          ((MGFCleaner) specProcessor).setECleanParameters(cleanConfig.getECleanConfigTemplate());
+        }
       }
 
     } else {

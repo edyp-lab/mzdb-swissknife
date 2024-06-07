@@ -60,7 +60,7 @@ public class MzDBMetrics {
         initReader();
 
       BufferedWriter writer = new BufferedWriter(new FileWriter(m_outputFile));
-      String[] columns = { "scan.id", "master_scan.id", "master_scan.rt", "master_scan.peaks_count", "samecycle_scan.id", "samecycle_scan.rt", "samecycle_scan.peaks_count", "nearest_scan.id", "nearest_scan.rt", "nearest_scan.peaks_count"};
+      String[] columns = { "scan.id", "scan.rt", "master_scan.id", "master_scan.rt", "master_scan.peaks_count", "samecycle_scan.id", "samecycle_scan.rt", "samecycle_scan.peaks_count", "nearest_scan.id", "nearest_scan.rt", "nearest_scan.peaks_count"};
 
       writer.write(Arrays.stream(columns).collect(Collectors.joining(DELIMITER)));
       writer.newLine();
@@ -72,6 +72,8 @@ public class MzDBMetrics {
 
         StringBuilder strBuilder = new StringBuilder();
         strBuilder.append(spHeader.getSpectrumId()).append(DELIMITER);
+        strBuilder.append(spHeader.getElutionTime()).append(DELIMITER);
+
 
         for (Optional<SpectrumSlice> spectrumSlice : ms1DataList) {
           if (spectrumSlice.isPresent()) {

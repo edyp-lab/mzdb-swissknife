@@ -2,6 +2,7 @@ package fr.profi.mzknife;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import fr.profi.mzknife.mgf.ECleanConfigTemplate;
 import fr.profi.mzknife.mgf.PCleanConfigTemplate;
 
 import java.util.List;
@@ -11,7 +12,7 @@ public class CommandArguments {
   public final static String RECALIBRATE_COMMAND_NAME = "recalibrate";
   public final static String SPLIT_COMMAND_NAME = "split";
   public final static String FILTER_COMMAND_NAME = "filter";
-  public final static String CLEAN_COMMAND_NAME = "clean";
+  public final static String CLEAN_COMMAND_NAME = "eclean";
   public final static String MERGE_COMMAND_NAME = "merge";
 
   public final static String MGF_METRICS_COMMAND_NAME = "metrics";
@@ -20,6 +21,8 @@ public class CommandArguments {
   public final static String CREATE_MGF_COMMAND_NAME = "create_mgf";
 
   public final static String PCLEAN_COMMAND_NAME = "pclean";
+
+  public final static String PEAKELS_COMMAND_NAME = "find_peakels";
 
   @Parameters(commandNames =  {RECALIBRATE_COMMAND_NAME}, commandDescription = "Recalibrate mzDB file using delta mass. Recalibration will be applied only on specified scans range.", separators = "=")
   public static class MzDBRecalibrateCommand {
@@ -103,7 +106,7 @@ public class CommandArguments {
   }
 
 
-  @Parameters(commandNames =  {CLEAN_COMMAND_NAME}, commandDescription = "Clean MS/MS fragment peaks of an MGF file.", separators = "=")
+  @Parameters(commandNames =  {CLEAN_COMMAND_NAME}, commandDescription = "Clean (EDyP method) MS/MS fragment peaks of an MGF file.", separators = "=")
   public static class MgfCleanerCommand {
 
     @Parameter(names = {"-i","--input"}, description = "mgf input file to clean", required = true, order = 0)
@@ -111,6 +114,9 @@ public class CommandArguments {
 
     @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used to detect fragment peaks.", required = false, order = 1)
     public Float mzTolPPM = 20.0f;
+
+    @Parameter(names = {"-lm", "--label_method"}, description = "clean fragments associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX).", required = false)
+    public String labelingMethodName = null;
 
     @Parameter(names = {"-o","--output"}, description = "mgf output file", required = false, order = 2)
     public String outputFileName;
@@ -183,14 +189,14 @@ public class CommandArguments {
     @Parameter(names = {"-ptitle", "--proline_title"}, description = "export spectrum 'TITLE' line using the Proline convention.", required = false)
     public Boolean exportProlineTitle= false;
 
-    @Parameter(names = {"-pClean", "--pClean_ms2_processing"}, description = "Apply pClean to MS2 spectra (pre-configured module2).", required = false)
-    public Boolean pClean = false;
+    @Parameter(names = {"-cMethod", "--clean_method"}, description = "Clean the generated MS2 spectra using the specified method (None, pClean or eClean).", required = false)
+    public String cleanMethod = "None";
 
-    @Parameter(names = {"-pLabelMethod", "--pClean_label_method"}, description = "Apply pClean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX).", required = false)
-    public String pCleanLabelMethodName = "";
+    @Parameter(names = {"-cLabelMethod", "--clean_label_method"}, description = "Apply clean Label filtering (pre-configured module1) associated with the selected method (ITRAQ4PLEX, ITRAQ8PLEX, TMT6PLEX, TMT10PLEX, TMT11PLEX, TMT16PLEX, TMT18PLEX).", required = false)
+    public String cleanLabelMethodName = "";
 
-    @Parameter(names = {"-pConfig" , "--pClean_config_template"}, description = "PClean config template to use. Mandatory if -pClean is specified (LabelFree, XLink or TMTLabelling).", converter = PCleanConfigConverter.class, required = false)
-    public PCleanConfig pCleanConfig;
+    @Parameter(names = {"-cConfig" , "--clean_config_template"}, description = "Clean config template to use. Mandatory if a clean method is specified. Use one of (LabelFree, XLink or TMTLabelling) values.", converter = CleanConfigConverter.class, required = false)
+    public CleanConfig cleanConfig;
 
     @Parameter(names = {"-da", "--dump_annotations"}, description = "Dump precursor computer annotation's in a separate dump file for statistical analyses purposes.", required = false)
     public Boolean dAnnot = false;
@@ -249,7 +255,7 @@ public class CommandArguments {
 
   }
 
-  @Parameters(commandNames = {PCLEAN_COMMAND_NAME}, commandDescription = "Apply pClean to the supplied MGF file", separators = "=")
+  @Parameters(commandNames = {PCLEAN_COMMAND_NAME}, commandDescription = "Clean (pClean method) to MS/MS fragment peaks of an MGF file", separators = "=")
   public static class PCleanCommand {
 
     @Parameter(names = {"-mgf"}, description = "Input MS/MS data", required = true)
@@ -284,19 +290,21 @@ public class CommandArguments {
     public boolean help;
   }
 
-  public enum PCleanConfig {
-    LABEL_FREE("LabelFree","Label Free", PCleanConfigTemplate.LABEL_FREE_CONFIG),
-    XLINK("XLink","XLink", PCleanConfigTemplate.XLINK_CONFIG),
-    TMT_LABELED("TMTLabelling", "TMT Labelling", PCleanConfigTemplate.TMT_LABELLING_CONFIG);
+  public enum CleanConfig {
+    LABEL_FREE("LabelFree","Label Free", PCleanConfigTemplate.LABEL_FREE_CONFIG, ECleanConfigTemplate.LABEL_FREE_CONFIG),
+    XLINK("XLink","XLink", PCleanConfigTemplate.XLINK_CONFIG, ECleanConfigTemplate.XLINK_CONFIG),
+    TMT_LABELED("TMTLabelling", "TMT Labelling", PCleanConfigTemplate.TMT_LABELLING_CONFIG, ECleanConfigTemplate.TMT_LABELLING_CONFIG);
 
     final String commandValue;
     final String displayValue;
     final PCleanConfigTemplate pCleanConfigTemplate;
+    final ECleanConfigTemplate eCleanConfigTemplate;
 
-    PCleanConfig(String cmdVal,String displayVal, PCleanConfigTemplate configTemplate) {
-      commandValue = cmdVal;
-      displayValue = displayVal;
-      pCleanConfigTemplate= configTemplate;
+    CleanConfig(String cmdVal, String displayVal, PCleanConfigTemplate pCleanConfigTemplate, ECleanConfigTemplate eCleanConfigTemplate) {
+      this.commandValue = cmdVal;
+      this.displayValue = displayVal;
+      this.pCleanConfigTemplate = pCleanConfigTemplate;
+      this.eCleanConfigTemplate = eCleanConfigTemplate;
     }
 
     public String getConfigCommandValue(){
@@ -307,12 +315,25 @@ public class CommandArguments {
       return displayValue;
     }
 
+
+    public List<String>  stringifyPCleanParametersList() {
+      return getPCleanConfigTemplate().stringifyParametersList();
+    }
+
+    public List<String>  stringifyECleanParametersList() {
+      return getECleanConfigTemplate().stringifyParametersList();
+    }
+
     public PCleanConfigTemplate getPCleanConfigTemplate(){
       return pCleanConfigTemplate;
     }
 
-    public static PCleanConfig getConfigFor(String cmdValue) {
-      for (PCleanConfig next : PCleanConfig.values()) {
+    public ECleanConfigTemplate getECleanConfigTemplate(){
+      return eCleanConfigTemplate;
+    }
+
+    public static CleanConfig getConfigFor(String cmdValue) {
+      for (CleanConfig next : CleanConfig.values()) {
         if (next.commandValue.equals(cmdValue))
           return next;
       }
@@ -326,6 +347,26 @@ public class CommandArguments {
   }
 
   public enum ScanSelectorMode {
-    MASTER_SCAN, SAME_CYCLE, NEAREST, ALL;
+    MASTER_SCAN, SAME_CYCLE, NEAREST, ALL
   }
+
+  @Parameters(commandNames = {PEAKELS_COMMAND_NAME}, commandDescription = "Search putative ions in a peakeldb file", separators = "=")
+  public static class PeakelsFinderCommand {
+
+    @Parameter(names = {"-p","--peakeldb_file"}, description = "peakeldb input file ", required = true, order = 0)
+    public String peakeldbFile;
+
+    @Parameter(names = {"-i","--ions_file"}, description = "putative ions to search for in the peakeldb", required = true, order = 0)
+    public String putativeIonsFile;
+
+    @Parameter(names = {"-o","--output"}, description = "matching peakels", required = false, order = 1)
+    public String outputFile;
+
+    @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for matching ions.", required = false)
+    public Float mzTolPPM = 5.0f;
+
+    @Parameter(names = {"-h", "--help"}, help = true)
+    public boolean help;
+  }
+
 }

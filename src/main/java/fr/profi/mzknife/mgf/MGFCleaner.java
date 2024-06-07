@@ -1,8 +1,11 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.chemistry.model.BiomoleculeAtomTable$;
 import fr.profi.chemistry.model.MolecularConstants;
 import fr.profi.ms.model.TheoreticalIsotopePattern;
 import fr.profi.mzdb.algo.DotProductPatternScorer;
+import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
+import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
 import fr.profi.mzdb.model.SpectrumData;
 import fr.profi.mzscope.InvalidMGFFormatException;
 import fr.profi.mzscope.MSMSSpectrum;
@@ -14,9 +17,12 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class MGFCleaner extends MGFRewriter {
+public class MGFCleaner extends MGFRewriter implements ISpectrumProcessor {
 
   private final static Logger LOG = LoggerFactory.getLogger(MGFCleaner.class);
+
+  private static final BiomoleculeAtomTable$ atomTable = BiomoleculeAtomTable$.MODULE$;
+  private IsobaricTag isobaricTags = null;
 
   private double mzTolPpm = 20.0;
 
@@ -107,23 +113,80 @@ public class MGFCleaner extends MGFRewriter {
     this.mzTolPpm = mzTolPpm;
   }
 
+  public MGFCleaner(double mzTolPpm, String labelingMethodName) {
+    this.mzTolPpm = mzTolPpm;
+    if ((labelingMethodName != null) && !labelingMethodName.isEmpty()) {
+      this.isobaricTags = IsobaricTag.valueOf(labelingMethodName.toUpperCase());
+    }
+
+  }
+
   public MGFCleaner(File srcFile, File m_dstFile, double mzTolPpm) throws InvalidMGFFormatException {
     super(srcFile, m_dstFile);
     this.mzTolPpm = mzTolPpm;
   }
 
+  public MGFCleaner(File srcFile, File m_dstFile, double mzTolPpm, IsobaricTag tags) throws InvalidMGFFormatException {
+    super(srcFile, m_dstFile);
+    this.mzTolPpm = mzTolPpm;
+    this.isobaricTags = tags;
+  }
+
+  // Not yet used since ECleanConfigTemplate has no parameter for now.
+  public void setECleanParameters(ECleanConfigTemplate eCleanConfigTemplate) {
+
+  }
+
+  @Override
+  public String getMethodName() {
+    return "edypClean";
+  }
+
+  @Override
+  public String getMethodVersion() {
+    return "1.0";
+  }
+
+  @Override
+  public SpectrumData processSpectrum(MgfPrecursor mgfPrecursor, SpectrumData spectrumData) {
+
+    int parentCharge = mgfPrecursor.getCharge();
+    double parentMass = mgfPrecursor.getPrecMz()*parentCharge - parentCharge*MolecularConstants.PROTON_MASS();
+    double[] masses = spectrumData.getMzList();
+    float[] intensities = spectrumData.getIntensityList();
+
+    List<Peak> peaks = new ArrayList<>(masses.length);
+    Map<Integer, Peak> peaksByIndex = new HashMap<>();
+    for (int k = 0; k < masses.length; k++) {
+      Peak p = new Peak(masses[k], intensities[k], k);
+      peaks.add(p);
+      peaksByIndex.put(p.index, p);
+    }
+
+    List<Peak> result = processPeaks(parentMass, parentCharge, peaks, spectrumData,  peaksByIndex);
+
+    masses = new double[result.size()];
+    intensities = new float[result.size()];
+    int k = 0;
+    for (Peak p : result) {
+      masses[k] = p.mass;
+      intensities[k++] = (float)p.intensity;
+    }
+
+    SpectrumData newSpectrumData = new SpectrumData(masses, intensities);
+
+    return newSpectrumData;
+  }
+
   protected MSMSSpectrum getSpectrum2Export(MSMSSpectrum inSpectrum){
 
-    double parentMass = inSpectrum.getPrecursorMz()*inSpectrum.getPrecursorCharge() - inSpectrum.getPrecursorCharge()*MolecularConstants.PROTON_MASS();
+    int parentCharge = inSpectrum.getPrecursorCharge();
+    double parentMass = inSpectrum.getPrecursorMz()*parentCharge - parentCharge*MolecularConstants.PROTON_MASS();
     double[] masses = inSpectrum.getMassValues();
     double[] intensities = inSpectrum.getIntensityValues();
     float[] fIntensities = new float[intensities.length];
 
-    List<Double> immoniumIonMasses = Arrays.stream(ImmoniumIon.values()).map(i -> i.mass).sorted().toList();
-
-
     List<Peak> peaks = new ArrayList<>(masses.length);
-    List<Peak> result = new ArrayList<>(masses.length);
     Map<Integer, Peak> peaksByIndex = new HashMap<>();
     for (int k = 0; k < masses.length; k++) {
       Peak p = new Peak(masses[k], intensities[k], k);
@@ -134,14 +197,63 @@ public class MGFCleaner extends MGFRewriter {
 
     SpectrumData spectrumData = new SpectrumData(masses, fIntensities);
 
+
+    List<Peak> result = processPeaks(parentMass, parentCharge, peaks, spectrumData,  peaksByIndex);
+
+
+    masses = new double[result.size()];
+    intensities = new double[result.size()];
+    int k = 0;
+    for (Peak p : result) {
+      masses[k] = p.mass;
+      intensities[k++] = p.intensity;
+    }
+
+    MSMSSpectrum outSpectrum = new MSMSSpectrum(
+            inSpectrum.getPrecursorMz(),
+            inSpectrum.getPrecursorIntensity(),
+            inSpectrum.getPrecursorCharge(),
+            inSpectrum.getRetentionTime());
+    inSpectrum.getAnnotations().forEachRemaining(a -> outSpectrum.setAnnotation(a, inSpectrum.getAnnotation(a)));
+
+    for(int i = 0; i < masses.length; i++) {
+      outSpectrum.addPeak(masses[i], intensities[i]);
+    }
+
+    return outSpectrum;
+  }
+
+  private List<Peak> processPeaks(double parentMass, int parentCharge, List<Peak> peaks, SpectrumData spectrumData, Map<Integer, Peak> peaksByIndex) {
+
+    List<Peak> result = new ArrayList<>(peaks.size());
+
+    List<Double> immoniumIonMasses = Arrays.stream(ImmoniumIon.values()).map(i -> i.mass).sorted().toList();
+    List<Double> reporterAssociatedIonMasses = new ArrayList<>(isobaricTags == null ? 0 : isobaricTags.reporterIons.length*3+3);
+
+    if (isobaricTags != null) {
+      for (double reporterMass : isobaricTags.reporterIons) {
+        reporterAssociatedIonMasses.add(reporterMass);
+        double reporterCOHMass = reporterMass + atomTable.getAtom("C").monoMass() + atomTable.getAtom("O").monoMass() + MolecularConstants.PROTON_MASS();
+        reporterAssociatedIonMasses.add(reporterCOHMass);
+        reporterAssociatedIonMasses.add(parentMass - reporterCOHMass);
+      }
+
+      reporterAssociatedIonMasses.add(isobaricTags.tagMass + MolecularConstants.PROTON_MASS());
+      reporterAssociatedIonMasses.add(isobaricTags.tagMass + 2*MolecularConstants.PROTON_MASS());
+      reporterAssociatedIonMasses.add(parentMass - isobaricTags.tagMass);
+
+    }
+
+    reporterAssociatedIonMasses.sort(Double::compareTo);
+
     peaks.sort((o1, o2) -> Double.compare(o2.intensity, o1.intensity));
 
-
-    // Filter immonium Ions
 
     for (int k = 0; k < peaks.size(); k++) {
 
       Peak p = peaks.get(k);
+
+      // Filter immonium Ions
       if (p.mass < 160) {
           for (double ionMass : immoniumIonMasses) {
             if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolPpm) {
@@ -153,8 +265,20 @@ public class MGFCleaner extends MGFRewriter {
           }
       }
 
+      // Filter reporter ions if isobaricTags is defined
+      if (isobaricTags != null) {
+          for (double ionMass : reporterAssociatedIonMasses) {
+            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolPpm) {
+              p.used = true;
+              break;
+            } else if (ionMass > p.mass) {
+              break;
+            }
+          }
+      }
+
       if (!p.used) {
-        IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolPpm, inSpectrum.getPrecursorCharge(), peaksByIndex);
+        IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolPpm, parentCharge, peaksByIndex);
 //        if (patternMatch != null) {
 //          LOG.info("Peak ({}, {}) predicted to ({}, {}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), patternMatch.theoreticalPattern.charge());
 //        }
@@ -185,28 +309,8 @@ public class MGFCleaner extends MGFRewriter {
 
 //    result.sort(Comparator.comparingDouble(o -> o.mass));
 
-    result = result.stream().filter( p -> p.mass <= parentMass).sorted(Comparator.comparingDouble(o -> o.mass)).collect(Collectors.toList());
-
-    masses = new double[result.size()];
-    intensities = new double[result.size()];
-    int k = 0;
-    for (Peak p : result) {
-      masses[k] = p.mass;
-      intensities[k++] = p.intensity;
-    }
-
-    MSMSSpectrum outSpectrum = new MSMSSpectrum(
-            inSpectrum.getPrecursorMz(),
-            inSpectrum.getPrecursorIntensity(),
-            inSpectrum.getPrecursorCharge(),
-            inSpectrum.getRetentionTime());
-    inSpectrum.getAnnotations().forEachRemaining(a -> outSpectrum.setAnnotation(a, inSpectrum.getAnnotation(a)));
-
-    for(int i = 0; i < masses.length; i++) {
-      outSpectrum.addPeak(masses[i], intensities[i]);
-    }
-
-    return outSpectrum;
+    result = result.stream().filter(p -> p.mass <= parentMass).sorted(Comparator.comparingDouble(o -> o.mass)).collect(Collectors.toList());
+    return result;
   }
 
   public static int getPeakIndex(double[] peaksMz, double value, double ppmTol) {
@@ -280,7 +384,7 @@ class IsotopicPatternMatch {
   public IsotopicPatternMatch(double score, TheoreticalIsotopePattern theoreticalPattern, List<Optional<Integer>> peaks) {
     this(score, theoreticalPattern);
     this.matchingPeaks = peaks;
-    this.matchingCount = (int)peaks.stream().filter(p -> !p.isEmpty()).count();
+    this.matchingCount = (int)peaks.stream().filter(p -> p.isPresent()).count();
   }
 
   public IsotopicPatternMatch(double score, TheoreticalIsotopePattern theoreticalPattern, double[] masses, double tolPPM) {
