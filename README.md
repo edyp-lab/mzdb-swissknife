@@ -54,3 +54,15 @@ To create an MGF file from the .apl files created by Maxquant, type:
 run.bat maxquant create_mgf -i1 Xpl1_002790.HCD.FTMS.sil0.apl -i2 Xpl1_002790.HCD.FTMS.peak.apl -o Xpl1_002790_MQ.mgf
 ```
 
+### Peakels command examples
+
+To search for putative features in a peakelDb file, type:
+
+```
+run.bat peakels find_peakels -p QEKAC160601_18.raw-4873932527404489086.sqlite -i putativeIons.csv -mztol 5.0 -o matchedFeatures.tsv
+```
+
+The `putativeIons.csv` file must contain the following columns (in this order) : {Id ; mz; charge; rt; rt_tolerance}. Any additional 
+column will be ignored. The name of the columns doesn't matter. the column separator is the semi colon (;).  
+
+

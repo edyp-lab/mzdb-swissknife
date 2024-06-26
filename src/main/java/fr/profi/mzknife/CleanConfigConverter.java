@@ -7,7 +7,7 @@ public class CleanConfigConverter implements IStringConverter<CommandArguments.C
 
     @Override
     public CommandArguments.CleanConfig convert(String value) {
-        CommandArguments.CleanConfig convertedValue = CommandArguments.CleanConfig.getConfigFor(value);
+        CommandArguments.CleanConfig convertedValue = CommandArguments.CleanConfig.getConfigFromCommandValue(value);
 
         if (convertedValue == null) {
             StringBuilder listValue = new StringBuilder();

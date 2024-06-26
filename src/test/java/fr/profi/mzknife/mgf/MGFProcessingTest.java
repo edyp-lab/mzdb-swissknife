@@ -28,7 +28,7 @@ public class MGFProcessingTest {
       pCleanProcessor.setPCleanParameters(false, false, false, false, false, true, true, false, true);
       JSpectrum.setImmoniumIons();
       DeltaMassDB.consider2aa = true;
-      Config.ms2tol = 0.05;
+      Config.ms2tol = PCleanProcessor.MS2_DEFAULT_TOL;
 
       pCleanProcessor.rewriteMGF();
       testFile(fDest);
@@ -51,7 +51,7 @@ public class MGFProcessingTest {
       pCleanProcessor.setPCleanParameters(true, true, true, false, false, true, true, false, true);
       JSpectrum.setImmoniumIons();
       DeltaMassDB.consider2aa = true;
-      Config.ms2tol = 0.05;
+      Config.ms2tol = PCleanProcessor.MS2_DEFAULT_TOL;
 
       pCleanProcessor.rewriteMGF();
       testFile(fDest);

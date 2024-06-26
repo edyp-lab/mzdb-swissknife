@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigFactory;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.Software;
 import fr.profi.mzdb.io.writer.mgf.*;
-import fr.profi.mzknife.mgf.MGFCleaner;
+import fr.profi.mzknife.mgf.MGFECleaner;
 import fr.profi.mzknife.mgf.PCleanProcessor;
 import fr.profi.mzknife.mzdb.MzDBMetrics;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
@@ -248,8 +248,8 @@ public class MzDbProcessing extends AbstractProcessing {
           specProcessor = new PCleanProcessor(cleanLabelMethodName);
           ((PCleanProcessor) specProcessor).setPCleanParameters(cleanConfig.getPCleanConfigTemplate());
         } else if ( createMgfCommand.cleanMethod.equalsIgnoreCase("eClean")) {
-          specProcessor = new MGFCleaner(20.0, cleanLabelMethodName);
-          ((MGFCleaner) specProcessor).setECleanParameters(cleanConfig.getECleanConfigTemplate());
+          specProcessor = new MGFECleaner(20.0, cleanLabelMethodName);
+          ((MGFECleaner) specProcessor).setECleanParameters(cleanConfig.getECleanConfigTemplate());
         }
       }
 

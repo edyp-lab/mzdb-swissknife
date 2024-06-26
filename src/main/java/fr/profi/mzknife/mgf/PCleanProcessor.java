@@ -15,6 +15,8 @@ import java.util.Optional;
 
 public class PCleanProcessor extends MGFRewriter implements ISpectrumProcessor {
 
+  public static final double MS2_DEFAULT_TOL = 0.05;
+
   Optional<String> labelMethodName = Optional.empty();
   Boolean imonFilter;
   Boolean repFilter;
@@ -119,7 +121,7 @@ public class PCleanProcessor extends MGFRewriter implements ISpectrumProcessor {
 
     JSpectrum jSpectrum = new JSpectrum();
 
-    Config.ms2tol = 0.05;
+    Config.ms2tol = MS2_DEFAULT_TOL;
     jSpectrum.setParentMass(package$.MODULE$.mozToMass(mgfPrecursor.getPrecMz(), mgfPrecursor.getCharge()));
     jSpectrum.setParentMassToCharge(mgfPrecursor.getPrecMz());
     jSpectrum.setCharge(mgfPrecursor.getCharge());

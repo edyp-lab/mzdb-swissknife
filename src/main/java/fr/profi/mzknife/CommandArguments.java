@@ -4,6 +4,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import fr.profi.mzknife.mgf.ECleanConfigTemplate;
 import fr.profi.mzknife.mgf.PCleanConfigTemplate;
+import fr.profi.mzknife.mgf.PCleanProcessor;
 
 import java.util.List;
 
@@ -181,7 +182,7 @@ public class CommandArguments {
     public String precMzComputation = "main_precursor_mz";
 
     @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for precursor m/z value definition.", required = false)
-    public Float mzTolPPM = 20.0f;
+    public Float mzTolPPM = 10.0f;
 
     @Parameter(names = {"-cutoff", "--intensity_cutoff"}, description = "optional intensity cutoff.", required = false)
     public Float intensityCutoff = 0.0f;
@@ -263,7 +264,7 @@ public class CommandArguments {
     @Parameter(names = {"-o","--output"}, description = "the MGF output file", required = true, order = 2)
     public String outputFileName;
     @Parameter(names = {"-itol"}, description = "Fragment ion tolerance (Da)", required = false)
-    public Double itol = 0.05;
+    public Double itol = PCleanProcessor.MS2_DEFAULT_TOL;
     @Parameter(names = {"-aa2"}, description = "Consider mass gap of two amino acids", required = false)
     public Boolean aa2 = true;
     @Parameter(names = {"-mionFilter"}, description = "Filter out immonium ions", required = false, arity = 1)
@@ -332,9 +333,17 @@ public class CommandArguments {
       return eCleanConfigTemplate;
     }
 
-    public static CleanConfig getConfigFor(String cmdValue) {
+    public static CleanConfig getConfigFromCommandValue(String cmdValue) {
       for (CleanConfig next : CleanConfig.values()) {
         if (next.commandValue.equals(cmdValue))
+          return next;
+      }
+      return null;
+    }
+
+    public static CleanConfig getConfigFromDisplayValue(String value) {
+      for (CleanConfig next : CleanConfig.values()) {
+        if (next.displayValue.equals(value))
           return next;
       }
       return null;

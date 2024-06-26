@@ -5,8 +5,8 @@ import java.util.List;
 
 public enum PCleanConfigTemplate {
 
-    LABEL_FREE_CONFIG(true, true, true, false, false, true, true, false, true),
-    XLINK_CONFIG(true, true, true, false, false, true, true, false, true),
+    LABEL_FREE_CONFIG(true, false, false, false, false, true, true, false, true),
+    XLINK_CONFIG(true, false, false, false, false, true, true, false, true),
     TMT_LABELLING_CONFIG(true, true, true, false, false, true, true, false, true);
 
     final Boolean imonFilter;

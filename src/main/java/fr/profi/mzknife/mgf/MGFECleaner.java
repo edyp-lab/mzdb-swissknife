@@ -17,9 +17,9 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class MGFCleaner extends MGFRewriter implements ISpectrumProcessor {
+public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
 
-  private final static Logger LOG = LoggerFactory.getLogger(MGFCleaner.class);
+  private final static Logger LOG = LoggerFactory.getLogger(MGFECleaner.class);
 
   private static final BiomoleculeAtomTable$ atomTable = BiomoleculeAtomTable$.MODULE$;
   private IsobaricTag isobaricTags = null;
@@ -109,11 +109,11 @@ public class MGFCleaner extends MGFRewriter implements ISpectrumProcessor {
     }
   }
 
-  protected MGFCleaner(double mzTolPpm) {
+  protected MGFECleaner(double mzTolPpm) {
     this.mzTolPpm = mzTolPpm;
   }
 
-  public MGFCleaner(double mzTolPpm, String labelingMethodName) {
+  public MGFECleaner(double mzTolPpm, String labelingMethodName) {
     this.mzTolPpm = mzTolPpm;
     if ((labelingMethodName != null) && !labelingMethodName.isEmpty()) {
       this.isobaricTags = IsobaricTag.valueOf(labelingMethodName.toUpperCase());
@@ -121,12 +121,12 @@ public class MGFCleaner extends MGFRewriter implements ISpectrumProcessor {
 
   }
 
-  public MGFCleaner(File srcFile, File m_dstFile, double mzTolPpm) throws InvalidMGFFormatException {
+  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm) throws InvalidMGFFormatException {
     super(srcFile, m_dstFile);
     this.mzTolPpm = mzTolPpm;
   }
 
-  public MGFCleaner(File srcFile, File m_dstFile, double mzTolPpm, IsobaricTag tags) throws InvalidMGFFormatException {
+  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm, IsobaricTag tags) throws InvalidMGFFormatException {
     super(srcFile, m_dstFile);
     this.mzTolPpm = mzTolPpm;
     this.isobaricTags = tags;
@@ -394,7 +394,7 @@ class IsotopicPatternMatch {
     int count = 0;
     for (int k = 0; k < 3; k++) {
       Tuple2<Object, Object> p = theoreticalPattern.mzAbundancePairs()[k];
-      int index = MGFCleaner.getPeakIndex(masses, (Double) p._1, tolPPM);
+      int index = MGFECleaner.getPeakIndex(masses, (Double) p._1, tolPPM);
       if (index >= 0 && index < masses.length) {
         peaks.add(Optional.of(index));
         count++;
