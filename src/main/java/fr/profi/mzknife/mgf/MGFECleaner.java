@@ -284,6 +284,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
 //        }
         if (patternMatch != null) {
           int charge = patternMatch.theoreticalPattern.charge();
+          LOG.info("pattern matching peak at ({},{}): ({},{}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), charge);
           for(Optional<Integer> peakIndex : patternMatch.matchingPeaks) {
             if (!peakIndex.isEmpty()) {
               final Peak peak = peaksByIndex.get(peakIndex.get());
@@ -297,7 +298,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
             final Integer peakIdx = patternMatch.matchingPeaks.get(0).get();
             Peak monoPeak = peaksByIndex.get(peakIdx);
             Peak newPeak = new Peak(monoPeak.mass*charge - (charge-1)* MolecularConstants.PROTON_MASS(), monoPeak.intensity, p.index);
-            //LOG.info("Move peak ({},{},{}+) to ({},{}, 1+)", monoPeak.mass, monoPeak.intensity, charge, newPeak.mass, newPeak.intensity);
+            LOG.info("Move peak ({},{},{}+) to ({},{}, 1+)", monoPeak.mass, monoPeak.intensity, charge, newPeak.mass, newPeak.intensity);
             result.add(newPeak);
           }
         } else {
@@ -349,7 +350,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       matches.add(patternMatch);
     }
 
-    matches = matches.stream().filter(m -> (m.score < 0.2) &&
+    matches = matches.stream().filter(m -> (m.score < 0.4) &&
             m.matchingPeaks.get(0).isPresent() && m.matchingPeaks.get(1).isPresent() &&
             !peaksByIndex.get(m.matchingPeaks.get(0).get()).used &&
             !peaksByIndex.get(m.matchingPeaks.get(1).get()).used ).collect(Collectors.toList());
