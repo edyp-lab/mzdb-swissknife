@@ -21,7 +21,7 @@ IF "%1" == "mzdb" (
  ) ELSE (
 
   echo.
-  echo %1 : unknow command, please use "mzdb", "mgf" or "maxquant" as command name followed by --help for displaying the command help.
+  echo %1 : unknow command, please use "mzdb", "mgf", "maxquant" or "peakels"   as command name followed by --help for displaying the command help.
   echo.
 
 )

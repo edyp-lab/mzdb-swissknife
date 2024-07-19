@@ -23,7 +23,9 @@ public class CommandArguments {
 
   public final static String PCLEAN_COMMAND_NAME = "pclean";
 
-  public final static String PEAKELS_COMMAND_NAME = "find_peakels";
+  public final static String MATCH_IONS_COMMAND_NAME = "match_ions";
+  public final static String MATCH_PSMS_COMMAND_NAME = "match_psms";
+
 
   @Parameters(commandNames =  {RECALIBRATE_COMMAND_NAME}, commandDescription = "Recalibrate mzDB file using delta mass. Recalibration will be applied only on specified scans range.", separators = "=")
   public static class MzDBRecalibrateCommand {
@@ -359,14 +361,39 @@ public class CommandArguments {
     MASTER_SCAN, SAME_CYCLE, NEAREST, ALL
   }
 
-  @Parameters(commandNames = {PEAKELS_COMMAND_NAME}, commandDescription = "Search putative ions in a peakeldb file", separators = "=")
-  public static class PeakelsFinderCommand {
+  @Parameters(commandNames = {MATCH_IONS_COMMAND_NAME}, commandDescription = "Search putative ions in a peakeldb file", separators = "=")
+  public static class IonsMatchingCommand {
 
-    @Parameter(names = {"-p","--peakeldb_file"}, description = "peakeldb input file ", required = true, order = 0)
-    public String peakeldbFile;
+    @Parameter(names = {"-pkdb","--peakeldb_file"}, description = "peakeldb input file ", required = true, order = 0)
+    public String peakelDbFile;
 
-    @Parameter(names = {"-i","--ions_file"}, description = "putative ions to search for in the peakeldb", required = true, order = 0)
+    @Parameter(names = {"-ions","--ions_file"}, description = "putative ions to search for in the peakeldb", required = true, order = 1)
     public String putativeIonsFile;
+
+    @Parameter(names = {"-ftdb","--featuredb_file"}, description = "featuredb containing matched features and peakels", required = false, order = 2)
+    public String featureDbFile;
+
+    @Parameter(names = {"-o","--output"}, description = "matching peakels", required = false, order = 1)
+    public String outputFile;
+
+    @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for matching ions.", required = false)
+    public Float mzTolPPM = 5.0f;
+
+    @Parameter(names = {"-h", "--help"}, help = true)
+    public boolean help;
+  }
+
+  @Parameters(commandNames = {MATCH_PSMS_COMMAND_NAME}, commandDescription = "Match identified PSMs to peakels from peakeldb file", separators = "=")
+  public static class PsmsMatchingCommand {
+
+    @Parameter(names = {"-mzdb","--mzdbdb_file"}, description = "mzdb input file ", required = true, order = 0)
+    public String mzDbFile;
+
+    @Parameter(names = {"-pkdb","--peakeldb_file"}, description = "peakeldb input file ", required = true, order = 0)
+    public String peakelDbFile;
+
+    @Parameter(names = {"-psms","--psms_file"}, description = "identified PSMs to search for in the peakeldb", required = true, order = 1)
+    public String psmsFile;
 
     @Parameter(names = {"-o","--output"}, description = "matching peakels", required = false, order = 1)
     public String outputFile;

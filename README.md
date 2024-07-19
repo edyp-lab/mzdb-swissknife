@@ -59,7 +59,7 @@ run.bat maxquant create_mgf -i1 Xpl1_002790.HCD.FTMS.sil0.apl -i2 Xpl1_002790.HC
 To search for putative features in a peakelDb file, type:
 
 ```
-run.bat peakels find_peakels -p QEKAC160601_18.raw-4873932527404489086.sqlite -i putativeIons.csv -mztol 5.0 -o matchedFeatures.tsv
+run.bat peakels match_ions -pkdb QEKAC160601_18.raw-4873932527404489086.sqlite -ions putativeIons.csv -mztol 5.0 -o matchedFeatures.tsv
 ```
 
 The `putativeIons.csv` file must contain the following columns (in this order) : {Id ; mz; charge; rt; rt_tolerance}. Any additional 

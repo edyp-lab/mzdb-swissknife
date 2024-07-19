@@ -1,5 +1,6 @@
 package fr.profi.mzknife;
 
+import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.model.PutativeFeature;
 import fr.profi.mzknife.peakeldb.PeakelsDbFinder;
 import fr.profi.mzknife.util.AbstractProcessing;
@@ -23,23 +24,34 @@ public class PeakelsProcessing extends AbstractProcessing {
    */
   public static void main(String[] args) throws Exception {
 
-    CommandArguments.PeakelsFinderCommand peakelFinderCommand = new CommandArguments.PeakelsFinderCommand();
+    CommandArguments.IonsMatchingCommand ionsMatchingCommand = new CommandArguments.IonsMatchingCommand();
+    CommandArguments.PsmsMatchingCommand psmsMatchingCommand = new CommandArguments.PsmsMatchingCommand();
 
-    addCommand(peakelFinderCommand);
+    addCommand(ionsMatchingCommand);
+    addCommand(psmsMatchingCommand);
 
     try{
 
       String parsedCommand = parseCommand(args);
+      switch (parsedCommand) {
+        case CommandArguments.MATCH_IONS_COMMAND_NAME:
+          if (ionsMatchingCommand.help)
+            usage();
 
-      if (parsedCommand.equals(CommandArguments.PEAKELS_COMMAND_NAME)) {
-        if (peakelFinderCommand.help)
+          matchIons(ionsMatchingCommand);
+          break;
+
+        case CommandArguments.MATCH_PSMS_COMMAND_NAME:
+          if (psmsMatchingCommand.help)
+            usage();
+
+          matchPsms(psmsMatchingCommand);
+          break;
+        default:
+          LOG.warn("Invalid command specified ");
           usage();
-
-        findPeakels(peakelFinderCommand);
-      } else {
-        LOG.warn("Invalid command specified ");
-        usage();
       }
+
     } catch (FileNotFoundException fnfe) {
       LOG.error("File not found", fnfe);
     }  catch (Exception e) {
@@ -47,14 +59,41 @@ public class PeakelsProcessing extends AbstractProcessing {
     }
   }
 
-  public static void findPeakels(CommandArguments.PeakelsFinderCommand peakelsFinderCommand) throws IOException {
+  private static void matchPsms(CommandArguments.PsmsMatchingCommand psmsMatchingCommand) throws Exception {
+    File peakeldb = new File(psmsMatchingCommand.peakelDbFile);
+    File putativeIons = new File(psmsMatchingCommand.psmsFile);
+    File mzdbFile = new File(psmsMatchingCommand.mzDbFile);
+    MzDbReader mzDbReader = new MzDbReader(mzdbFile, true);
 
-    File peakeldb = new File(peakelsFinderCommand.peakeldbFile);
-    File putativeIons = new File(peakelsFinderCommand.putativeIonsFile);
-    File outputFile = getDestFile(peakelsFinderCommand.outputFile, ".tsv", peakeldb);
+    final List<PutativeFeature> putativeFeatures = readPutativeFeatures(new File(psmsMatchingCommand.psmsFile));
 
+    File outputFile = getDestFile(psmsMatchingCommand.outputFile, ".tsv", peakeldb);
+    PeakelsDbFinder finder = new PeakelsDbFinder(peakeldb, outputFile);
+
+    finder.matchIdentifiedPsms(putativeFeatures, mzDbReader, psmsMatchingCommand.mzTolPPM);
+
+  }
+
+  public static void matchIons(CommandArguments.IonsMatchingCommand ionsMatchingCommand) throws IOException {
+
+    File peakeldb = new File(ionsMatchingCommand.peakelDbFile);
+    File featuredb = null;
+
+    if (ionsMatchingCommand.featureDbFile != null && !ionsMatchingCommand.featureDbFile.isEmpty()) {
+      featuredb = new File(ionsMatchingCommand.featureDbFile);
+    }
+
+    final List<PutativeFeature> putativeFeatures = readPutativeFeatures(new File(ionsMatchingCommand.putativeIonsFile));
+
+    File outputFile = getDestFile(ionsMatchingCommand.outputFile, ".tsv", peakeldb);
+    PeakelsDbFinder finder = new PeakelsDbFinder(peakeldb, outputFile);
+    finder.matchPutativeFeatures(putativeFeatures, featuredb, ionsMatchingCommand.mzTolPPM);
+
+  }
+
+  private static List<PutativeFeature> readPutativeFeatures(File file) throws IOException {
     List<PutativeFeature> putativeFeatures = new ArrayList<>();
-    final BufferedReader bufferedReader = new BufferedReader(new FileReader(putativeIons));
+    final BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
     //
     String line = bufferedReader.readLine();
     line = bufferedReader.readLine();
@@ -68,11 +107,7 @@ public class PeakelsProcessing extends AbstractProcessing {
       }
       line = bufferedReader.readLine();
     }
-
-    PeakelsDbFinder finder = new PeakelsDbFinder(peakeldb, outputFile);
-    finder.findPeakels(putativeFeatures, peakelsFinderCommand.mzTolPPM);
-
-
+    return putativeFeatures;
   }
 
 }
