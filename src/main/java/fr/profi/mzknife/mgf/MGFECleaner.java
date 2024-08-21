@@ -279,11 +279,9 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
 
       if (!p.used) {
         IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolPpm, parentCharge, peaksByIndex);
-//        if (patternMatch != null) {
-//          LOG.info("Peak ({}, {}) predicted to ({}, {}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), patternMatch.theoreticalPattern.charge());
-//        }
         if (patternMatch != null) {
           int charge = patternMatch.theoreticalPattern.charge();
+          //LOG.info("pattern matching peak at ({},{}): ({},{}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), charge);
           for(Optional<Integer> peakIndex : patternMatch.matchingPeaks) {
             if (!peakIndex.isEmpty()) {
               final Peak peak = peaksByIndex.get(peakIndex.get());
@@ -349,7 +347,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       matches.add(patternMatch);
     }
 
-    matches = matches.stream().filter(m -> (m.score < 0.2) &&
+    matches = matches.stream().filter(m -> (m.score < 0.4) &&
             m.matchingPeaks.get(0).isPresent() && m.matchingPeaks.get(1).isPresent() &&
             !peaksByIndex.get(m.matchingPeaks.get(0).get()).used &&
             !peaksByIndex.get(m.matchingPeaks.get(1).get()).used ).collect(Collectors.toList());
