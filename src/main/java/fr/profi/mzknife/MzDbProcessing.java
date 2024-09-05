@@ -163,6 +163,7 @@ public class MzDbProcessing extends AbstractProcessing {
 
     }
     comments.add("precMzComputation.description="+precursorComputation.getMethodName()+" - version "+precursorComputation.getMethodVersion());
+    comments.add("spectrumProcessor.description="+specProcessor.getMethodName()+" - version "+specProcessor.getMethodVersion());
     comments.add("input.mzdb.format.version="+mzDbReader.getModelVersion());
     Software soft = mzDbReader.getMzdbConverter();
     if(soft!=null) {
