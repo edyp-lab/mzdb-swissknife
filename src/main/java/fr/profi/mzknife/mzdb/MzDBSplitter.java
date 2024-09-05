@@ -141,7 +141,8 @@ public class MzDBSplitter {
                 String cvName = line.substring(8).trim();
                 if (cvName.startsWith("="))
                   cvName = cvName.substring(1);
-                cvPrefix.add(cvName.trim());
+                String cvValue = String.valueOf(Float.valueOf(cvName.trim()).intValue());
+                cvPrefix.add(cvValue);
               } else if(line.contains("Exploris")){
                 isSplittable = true;
               }
@@ -150,7 +151,8 @@ public class MzDBSplitter {
         } //End go through User text
       }
 
-      LOG.trace(" is mzDB file USerText 'Exploris'? {} with {} CV", isSplittable, nbrCV);
+      LOG.trace(" is mzDB file USerText 'Exploris'? {} with {} CV => {}", isSplittable, nbrCV, cvPrefix);
+
       if (!isSplittable || nbrCV <=1) {
         LOG.warn(" --- The specified file is not an Exploris result or no CV has been defined");
         if(!isSplittable)
@@ -195,9 +197,12 @@ public class MzDBSplitter {
           List<CVParam> params = srcSpectrumHeader.getCVParams();
           if(params != null && ! params.isEmpty()) {
             for (CVParam nextParam : params){
-              if(nextParam.getAccession().equals(CV_PARAM_ACC) && cvPrefix.contains(nextParam.getValue())) {
-                spectrumWriter = writerPerCV.get(nextParam.getValue()) ;
-                break;
+              if(nextParam.getAccession().equals(CV_PARAM_ACC)) {
+                String nextVal = String.valueOf(Float.valueOf(nextParam.getValue()).intValue());
+                if(cvPrefix.contains(nextVal)) {
+                  spectrumWriter = writerPerCV.get(nextVal);
+                  break;
+                }
               }
             }
 
