@@ -144,7 +144,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
 
   @Override
   public String getMethodVersion() {
-    return "1.0";
+    return "1.1";
   }
 
   @Override
