@@ -7,6 +7,7 @@ import fr.profi.mzdb.db.model.params.param.CVEntry;
 import fr.profi.mzdb.db.model.params.param.CVParam;
 import fr.profi.mzdb.db.model.params.param.UserParam;
 import fr.profi.mzdb.model.SpectrumHeader;
+import fr.profi.mzknife.util.ParamsHelper;
 import fr.profi.util.metrics.Metric;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -54,7 +55,7 @@ public  class HeaderPrecursorsTest {
         float upperMzOffset = Float.parseFloat(cvParams[2].getValue());
 
 
-        UserParam thermoPrecMzParam = sh.getScanList().getScans().get(0).getUserParam("[Thermo Trailer Extra]Monoisotopic M/Z:");
+        UserParam thermoPrecMzParam = sh.getScanList().getScans().get(0).getUserParam(ParamsHelper.UP_MONOISOTOPIC_NAME);
         double thermoRefinedPrecMz = Double.parseDouble(thermoPrecMzParam.getValue());
         if (thermoRefinedPrecMz <= 0.0) {
           metric.incr("no_thermo_mz_value");

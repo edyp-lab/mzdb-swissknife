@@ -5,10 +5,13 @@ import fr.profi.mzdb.BBSizes;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.SharedParamTree;
 import fr.profi.mzdb.db.model.params.param.CVParam;
+import fr.profi.mzdb.db.model.params.param.UserParam;
 import fr.profi.mzdb.db.model.params.param.UserText;
 import fr.profi.mzdb.io.util.MzDBUtil;
 import fr.profi.mzdb.io.writer.MzDBWriter;
+import fr.profi.mzdb.io.writer.ParamTreeStringifier;
 import fr.profi.mzdb.model.*;
+import fr.profi.mzknife.util.ParamsHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +93,7 @@ public class MzDBSplitter {
       SpectrumHeader[] headers = m_mzDbReader.getSpectrumHeaders();
       Arrays.sort(headers, Comparator.comparingLong(SpectrumHeader::getSpectrumId));
 
-      //To know if mzdb is issu from an exploris !
+      //To know if mzdb is issue from an exploris !
       // 1. table shared_param_tree ; col  :data
       //<referenceableParamGroup id="CommonInstrumentParams">
       //  <cvParam cvRef="MS" accession="MS:1003028" name="Orbitrap Exploris 480" value=""/>
@@ -164,6 +167,8 @@ public class MzDBSplitter {
       } else {
 
         m_outputMzdbFiles = new ArrayList<>(cvPrefix.size());
+        Map<Long, Long> newIndexByOldIndex = new HashMap<>();
+        Map<String, Long> nextIndexByCvPrefix = new HashMap<>();
         MzDBMetaData mzDbMetaData = MzDBUtil.createMzDbMetaData(m_mzDbReader);
         AcquisitionMode srcAcqMode = m_mzDbReader.getAcquisitionMode();
         boolean isDIA = (srcAcqMode != null && srcAcqMode.equals(fr.profi.mzdb.model.AcquisitionMode.SWATH));
@@ -174,6 +179,7 @@ public class MzDBSplitter {
           MzDBWriter writer = new MzDBWriter(f, false, mzDbMetaData, defaultBBsize, isDIA);
           writer.initialize();
           writerPerCV.put(nextCV, writer);
+          nextIndexByCvPrefix.put(nextCV, 1L);
         }
         LOG.trace(" Writers created for each CVs");
 
@@ -194,6 +200,7 @@ public class MzDBSplitter {
 
           readScanCount++;
           MzDBWriter spectrumWriter = null;
+          long nextIndex = -1L;
           List<CVParam> params = srcSpectrumHeader.getCVParams();
           if(params != null && ! params.isEmpty()) {
             for (CVParam nextParam : params){
@@ -201,18 +208,20 @@ public class MzDBSplitter {
                 String nextVal = String.valueOf(Float.valueOf(nextParam.getValue()).intValue());
                 if(cvPrefix.contains(nextVal)) {
                   spectrumWriter = writerPerCV.get(nextVal);
+                  nextIndex = nextIndexByCvPrefix.get(nextVal);
+                  nextIndexByCvPrefix.put(nextVal, nextIndex+1);
                   break;
                 }
               }
             }
 
             if(spectrumWriter == null) {
-              LOG.warn("Spectra {} (tile {}) has NO CV. Will not be write in any output file ", srcSpectrumHeader.getSpectrumId(), srcSpectrumHeader.getTitle());
+              LOG.warn(" !!!!! Spectra {} (tile {}) has NO CV. Will not be write in any output file ", srcSpectrumHeader.getSpectrumId(), srcSpectrumHeader.getTitle());
               continue;
             }
 
             Spectrum srcSpectrum = m_mzDbReader.getSpectrum(srcSpectrumHeader.getSpectrumId());
-
+            newIndexByOldIndex.put(srcSpectrum.getHeader().getId(), nextIndex);
 
 //            long start = System.currentTimeMillis();
 //            long id = srcSpectrumHeader.getSpectrumId();
@@ -227,11 +236,37 @@ public class MzDBSplitter {
 //            String precStr =  srcSpectrumHeader.getPrecursorListAsString(m_mzDbReader.getConnection());
 //            long step4 = System.currentTimeMillis();
 //            time_read4 += step4 - step3;
+            boolean scanUpdated = false;
+            if(srcSpectrum.getHeader().getScanList() != null
+                    && srcSpectrum.getHeader().getScanList().getScans() != null
+                    && !srcSpectrum.getHeader().getScanList().getScans().isEmpty()) {
+              List<UserParam> uParams = srcSpectrum.getHeader().getScanList().getScans().get(0).getUserParams();
+
+              if(uParams != null && !uParams.isEmpty() ) {
+                for(int i = 0; i<uParams.size(); i++) {
+                  UserParam uParam = uParams.get(i);
+                  if (ParamsHelper.UP_MASTER_SCAN_NAME.equals(uParam.getName())) {
+                    Integer prevScIndex = Integer.parseInt(uParam.getValue());
+                    if(prevScIndex>0) {
+                      Long newScIndex = newIndexByOldIndex.get(prevScIndex.longValue());
+                      uParam.setValue(newScIndex.toString());
+                      uParams.set(i, uParam);
+                      scanUpdated = true;
+                    }
+                    break;
+                  }
+                }
+              }
+            }
+
+            String scanAsString = scanUpdated ? ParamTreeStringifier.stringifyScanList(srcSpectrumHeader.getScanList()) : srcSpectrumHeader.getScanListAsString(m_mzDbReader.getConnection());
+            if(scanUpdated)
+              LOG.warn(" ----- new scanList "+scanAsString+"\n Was "+srcSpectrumHeader.getScanListAsString(m_mzDbReader.getConnection()));
 
             SpectrumMetaData spectrumMetaData = new SpectrumMetaData(
                     srcSpectrumHeader.getSpectrumId(),
                     srcSpectrumHeader.getParamTreeAsString(m_mzDbReader.getConnection()),
-                    srcSpectrumHeader.getScanListAsString(m_mzDbReader.getConnection()),
+                    scanAsString,
                     srcSpectrumHeader.getPrecursorListAsString(m_mzDbReader.getConnection()));
 //            long end = System.currentTimeMillis();
 //            time_read5 += end-step4;
@@ -281,4 +316,5 @@ public class MzDBSplitter {
     }
 
   }
+
 }

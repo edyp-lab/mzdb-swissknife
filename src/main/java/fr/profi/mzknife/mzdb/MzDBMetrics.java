@@ -9,6 +9,7 @@ import fr.profi.mzdb.db.model.params.param.CVParam;
 import fr.profi.mzdb.db.model.params.param.UserParam;
 import fr.profi.mzdb.io.writer.mgf.MgfBoostPrecursorExtractor;
 import fr.profi.mzdb.model.*;
+import fr.profi.mzknife.util.ParamsHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,7 +130,7 @@ public class MzDBMetrics {
     float minrt = time - 5;
     float maxrt = time + 5;
 
-    UserParam masterScanUP = spectrumHeader.getScanList().getScans().get(0).getUserParam("[Thermo Trailer Extra]Master Scan Number:");
+    UserParam masterScanUP = spectrumHeader.getScanList().getScans().get(0).getUserParam(ParamsHelper.UP_MASTER_SCAN_NAME);
     Optional<SpectrumSlice> masterScanOpt = Optional.empty();
     if (masterScanUP != null) {
       int masterScanIndex = Integer.parseInt(masterScanUP.getValue());
