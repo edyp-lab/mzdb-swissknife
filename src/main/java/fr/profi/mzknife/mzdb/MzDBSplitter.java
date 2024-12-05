@@ -19,6 +19,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.StreamCorruptedException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MzDBSplitter {
 
@@ -187,6 +189,7 @@ public class MzDBSplitter {
         int rewritedScanCount = 0;
         int readScanCount = 0;
 
+        Pattern spectrumTitlePattern = Pattern.compile("[\\w]*scan[\\s]*=[\\s]*([\\d]+)");
         //VDS for timing debug, to remove
 //        long time_read3 = 0;
 //        long time_read1 = 0;
@@ -221,7 +224,8 @@ public class MzDBSplitter {
             }
 
             Spectrum srcSpectrum = m_mzDbReader.getSpectrum(srcSpectrumHeader.getSpectrumId());
-            newIndexByOldIndex.put(srcSpectrum.getHeader().getId(), nextIndex);
+            Long initialId = srcSpectrum.getHeader().getId();
+            newIndexByOldIndex.put(initialId, nextIndex);
 
 //            long start = System.currentTimeMillis();
 //            long id = srcSpectrumHeader.getSpectrumId();
@@ -258,10 +262,16 @@ public class MzDBSplitter {
                 }
               }
             }
+            String title = srcSpectrum.getHeader().getTitle();
+            Matcher titleMatcher = spectrumTitlePattern.matcher(title);
+            if(titleMatcher.find() && Long.valueOf(titleMatcher.group(1)).equals(initialId) ){
+              title = titleMatcher.replaceAll("scan="+newIndexByOldIndex.get(initialId));
+              srcSpectrum.getHeader().setTitle(title);
+            }
 
             String scanAsString = scanUpdated ? ParamTreeStringifier.stringifyScanList(srcSpectrumHeader.getScanList()) : srcSpectrumHeader.getScanListAsString(m_mzDbReader.getConnection());
-            if(scanUpdated)
-              LOG.warn(" ----- new scanList "+scanAsString+"\n Was "+srcSpectrumHeader.getScanListAsString(m_mzDbReader.getConnection()));
+//            if(scanUpdated)
+//              LOG.warn(" ----- new scanList "+scanAsString+"\n Was "+srcSpectrumHeader.getScanListAsString(m_mzDbReader.getConnection()));
 
             SpectrumMetaData spectrumMetaData = new SpectrumMetaData(
                     srcSpectrumHeader.getSpectrumId(),
