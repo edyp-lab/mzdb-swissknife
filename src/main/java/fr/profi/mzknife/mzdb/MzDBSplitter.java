@@ -66,7 +66,7 @@ public class MzDBSplitter {
     int index = rootFileName.lastIndexOf('.');
     if (index > 0)
       rootFileName = rootFileName.substring(0, index);
-    rootFileName = rootFileName + prefix.trim() + m_fileExtension;
+    rootFileName = rootFileName +"_"+ prefix.trim() + m_fileExtension;
     return new File(m_inputMzdbFile.getParentFile(), rootFileName);
   }
 
