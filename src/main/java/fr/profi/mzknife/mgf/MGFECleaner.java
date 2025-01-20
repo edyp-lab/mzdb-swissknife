@@ -7,24 +7,24 @@ import fr.profi.mzdb.algo.DotProductPatternScorer;
 import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
 import fr.profi.mzdb.model.SpectrumData;
-import fr.profi.mzscope.InvalidMGFFormatException;
 import fr.profi.mzscope.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
+public class MGFECleaner extends MGFThreadedRewriter implements ISpectrumProcessor {
 
-  private final static Logger LOG = LoggerFactory.getLogger(MGFECleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MGFECleaner.class);
 
   private static final BiomoleculeAtomTable$ atomTable = BiomoleculeAtomTable$.MODULE$;
-  private IsobaricTag isobaricTags = null;
 
-  private double mzTolPpm = 20.0;
+  private final IsobaricTag isobaricTags;
+  private final double mzTolerancePpm;
 
   public static class Peak {
 
@@ -112,25 +112,28 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
   }
 
   protected MGFECleaner(double mzTolPpm) {
-    this.mzTolPpm = mzTolPpm;
+    mzTolerancePpm = mzTolPpm;
+    isobaricTags = null;
   }
 
-  public MGFECleaner(double mzTolPpm, String labelingMethodName) {
-    this.mzTolPpm = mzTolPpm;
+  public MGFECleaner(double mzTolerancePpm, String labelingMethodName) {
+    this.mzTolerancePpm = mzTolerancePpm;
     if ((labelingMethodName != null) && !labelingMethodName.isEmpty()) {
-      this.isobaricTags = IsobaricTag.valueOf(labelingMethodName.toUpperCase());
+      isobaricTags = IsobaricTag.valueOf(labelingMethodName.toUpperCase());
+    } else {
+      isobaricTags = null;
     }
-
   }
 
-  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm) throws InvalidMGFFormatException {
+  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm) throws IOException {
     super(srcFile, m_dstFile);
-    this.mzTolPpm = mzTolPpm;
+    mzTolerancePpm = mzTolPpm;
+    isobaricTags = null;
   }
 
-  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm, IsobaricTag tags) throws InvalidMGFFormatException {
+  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm, IsobaricTag tags) throws IOException {
     super(srcFile, m_dstFile);
-    this.mzTolPpm = mzTolPpm;
+    mzTolerancePpm = mzTolPpm;
     this.isobaricTags = tags;
   }
 
@@ -258,7 +261,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       // Filter immonium Ions
       if (p.mass < 160) {
           for (double ionMass : immoniumIonMasses) {
-            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolPpm) {
+            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolerancePpm) {
               p.used = true;
               break;
             } else if (ionMass > p.mass) {
@@ -270,7 +273,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       // Filter reporter ions if isobaricTags is defined
       if (isobaricTags != null) {
           for (double ionMass : reporterAssociatedIonMasses) {
-            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolPpm) {
+            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolerancePpm) {
               p.used = true;
               break;
             } else if (ionMass > p.mass) {
@@ -280,7 +283,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       }
 
       if (!p.used) {
-        IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolPpm, parentCharge, peaksByIndex);
+        IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolerancePpm, parentCharge, peaksByIndex);
         if (patternMatch != null) {
           int charge = patternMatch.theoreticalPattern.charge();
           //LOG.info("pattern matching peak at ({},{}): ({},{}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), charge);

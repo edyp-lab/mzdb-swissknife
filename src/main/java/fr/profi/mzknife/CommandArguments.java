@@ -122,6 +122,9 @@ public class CommandArguments {
     @Parameter(names = {"-o","--output"}, description = "mgf output file", required = false, order = 2)
     public String outputFileName;
 
+    @Parameter(names = {"-t", "--threads"}, description = "number of threads used to process the spectrum", required = false)
+    public Integer threads = 3;
+
     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
 
@@ -222,6 +225,9 @@ public class CommandArguments {
 
     @Parameter(names = {"-mss", "--ms1_scan_selector"}, description = "[mgf_boost] MS1 scan selector mode. Controls the MS1 scan from which precursors are detected : MASTER_SCAN (use the MS1 scan referenced as the 'master scan' if available), SAME_CYCLE (use the first preceding MS1 scan), NEAREST (use the MS1 scan nearest to the MS2 event), ALL (use all scans)", required = false)
     public ScanSelectorMode scanSelectorMode = ScanSelectorMode.MASTER_SCAN;
+
+    @Parameter(names = {"-t", "--threads"}, description = "number of threads used to clean the spectrum", required = false)
+    public Integer threads = 3;
 
     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;

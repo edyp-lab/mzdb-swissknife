@@ -139,6 +139,9 @@ public class MzDbProcessing extends AbstractProcessing {
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);
 
+//    MgfWriter writer = new MGFThreadedWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
+//    ((MGFThreadedWriter)writer).setWorkersCount(mzDBCreateMgfCommand.threads);
+
     MgfWriter writer = new MgfWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
 
     MzDbReader mzDbReader = writer.getMzDbReader();

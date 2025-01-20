@@ -6,11 +6,11 @@ import Preprocessing.JSpectrum;
 import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
 import fr.profi.mzdb.model.SpectrumData;
-import fr.profi.mzscope.InvalidMGFFormatException;
 import fr.profi.mzscope.MSMSSpectrum;
 import fr.profi.util.ms.package$;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Optional;
 
 public class PCleanProcessor extends MGFRewriter implements ISpectrumProcessor {
@@ -51,7 +51,7 @@ public class PCleanProcessor extends MGFRewriter implements ISpectrumProcessor {
     }
   }
 
-  public PCleanProcessor(File srcFile, File m_dstFile, String method) throws InvalidMGFFormatException {
+  public PCleanProcessor(File srcFile, File m_dstFile, String method) throws IOException {
     super(srcFile, m_dstFile);
     setLabelMethod(method);
     JSpectrum.setImmoniumIons();

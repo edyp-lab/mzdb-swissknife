@@ -1,12 +1,12 @@
 package fr.profi.mzknife.mgf;
 
-import fr.profi.mzscope.InvalidMGFFormatException;
 import fr.profi.mzscope.MGFConstants;
 import fr.profi.mzscope.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 public class MGFFilter extends MGFRewriter {
@@ -15,7 +15,7 @@ public class MGFFilter extends MGFRewriter {
   List<Integer> charges;
   Boolean toExclude;
 
-  public MGFFilter(File srcFile, File dstFile) throws InvalidMGFFormatException {
+  public MGFFilter(File srcFile, File dstFile) throws IOException {
     super(srcFile,dstFile);
 
   }
