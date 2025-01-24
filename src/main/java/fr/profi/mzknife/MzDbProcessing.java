@@ -7,6 +7,7 @@ import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.db.model.Software;
 import fr.profi.mzdb.io.writer.mgf.*;
 import fr.profi.mzknife.mgf.MGFECleaner;
+import fr.profi.mzknife.mgf.MGFThreadedWriter;
 import fr.profi.mzknife.mgf.PCleanProcessor;
 import fr.profi.mzknife.mzdb.MzDBMetrics;
 import fr.profi.mzknife.mzdb.MzDBRecalibrator;
@@ -139,10 +140,15 @@ public class MzDbProcessing extends AbstractProcessing {
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);
 
-//    MgfWriter writer = new MGFThreadedWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
-//    ((MGFThreadedWriter)writer).setWorkersCount(mzDBCreateMgfCommand.threads);
 
-    MgfWriter writer = new MgfWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
+    MgfWriter writer;
+
+    if (mzDBCreateMgfCommand.threads > 0) {
+      writer = new MGFThreadedWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
+      ((MGFThreadedWriter) writer).setWorkersCount(mzDBCreateMgfCommand.threads);
+    } else {
+      writer = new MgfWriter(mzDBCreateMgfCommand.mzdbFile, mzDBCreateMgfCommand.msLevel);
+    }
 
     MzDbReader mzDbReader = writer.getMzDbReader();
 

@@ -123,7 +123,7 @@ public class CommandArguments {
     public String outputFileName;
 
     @Parameter(names = {"-t", "--threads"}, description = "number of threads used to process the spectrum", required = false)
-    public Integer threads = 3;
+    public Integer threads = 1;
 
     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
@@ -227,7 +227,7 @@ public class CommandArguments {
     public ScanSelectorMode scanSelectorMode = ScanSelectorMode.MASTER_SCAN;
 
     @Parameter(names = {"-t", "--threads"}, description = "number of threads used to clean the spectrum", required = false)
-    public Integer threads = 3;
+    public Integer threads = 0;
 
     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
