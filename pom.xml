@@ -12,7 +12,7 @@
 
     <groupId>fr.profi</groupId>
     <artifactId>mzdb-swissknife</artifactId>
-    <version>1.1.4quant-SNAPSHOT</version>
+    <version>1.2.0quant-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
@@ -26,12 +26,12 @@
         <dependency>
             <groupId>fr.profi</groupId>
             <artifactId>mzdb-access_${scala.compat.version}</artifactId>
-            <version>1.3.0quant-SNAPSHOT</version>
+            <version>1.3.2quant-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>fr.profi</groupId>
             <artifactId>mzdb-processing_${scala.compat.version}</artifactId>
-            <version>1.3.0quant-SNAPSHOT</version>
+            <version>1.3.2quant-SNAPSHOT</version>
         </dependency>
 
         <dependency>
