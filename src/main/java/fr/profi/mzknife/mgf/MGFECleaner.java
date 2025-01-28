@@ -2,29 +2,29 @@ package fr.profi.mzknife.mgf;
 
 import fr.profi.chemistry.model.BiomoleculeAtomTable$;
 import fr.profi.chemistry.model.MolecularConstants;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.ms.model.TheoreticalIsotopePattern;
 import fr.profi.mzdb.algo.DotProductPatternScorer;
 import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
 import fr.profi.mzdb.model.SpectrumData;
-import fr.profi.mzscope.InvalidMGFFormatException;
-import fr.profi.mzscope.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
+public class MGFECleaner extends MGFThreadedRewriter implements ISpectrumProcessor {
 
-  private final static Logger LOG = LoggerFactory.getLogger(MGFECleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MGFECleaner.class);
 
   private static final BiomoleculeAtomTable$ atomTable = BiomoleculeAtomTable$.MODULE$;
-  private IsobaricTag isobaricTags = null;
 
-  private double mzTolPpm = 20.0;
+  private final IsobaricTag isobaricTags;
+  private final double mzTolerancePpm;
 
   public static class Peak {
 
@@ -52,7 +52,9 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
     TMT10PLEX(229.162932, new double[]{ 126.1277261, 127.1247610 ,127.1310809, 128.1281158, 128.1344357, 129.1314706, 129.1377905, 130.1348254, 130.1411453, 131.1381802}),
     TMT11PLEX(229.162932, new double[]{ 126.1277261, 127.1247610 ,127.1310809, 128.1281158, 128.1344357, 129.1314706, 129.1377905, 130.1348254, 130.1411453, 131.1381802, 131.144999 }),
     TMT16PLEX( 304.207146 , new double[]{ 126.127726, 127.124761, 127.131081, 128.128116, 128.134436, 129.131471, 129.137790, 130.134825, 130.141145, 131.138180, 131.144500, 132.141535, 132.147855, 133.144890, 133.151210, 134.148245}),
-    TMT18PLEX( 304.207146 , new double[]{ 126.127726, 127.124761, 127.131081, 128.128116, 128.134436, 129.131471, 129.137790, 130.134825, 130.141145, 131.138180, 131.144500, 132.141535, 132.147855, 133.144890, 133.151210, 134.148245, 134.154565, 135.151600});
+    TMT18PLEX( 304.207146 , new double[]{ 126.127726, 127.124761, 127.131081, 128.128116, 128.134436, 129.131471, 129.137790, 130.134825, 130.141145, 131.138180, 131.144500, 132.141535, 132.147855, 133.144890, 133.151210, 134.148245, 134.154565, 135.151600}),
+    TMT16PLEX_DEUTERATED( 304.2135 , new double[]{ 127.134003, 128.131038, 128.137358, 129.134393 ,129.140713, 130.137748, 130.144068, 131.141103, 131.147423, 132.144458, 132.150778, 133.147813, 133.154133, 134.151171, 134.157491, 135.154526}),
+    TMT35PLEX( 304.2135 , new double[]{ 126.127726, 127.124761, 127.131081, 127.134003, 128.128116, 128.131038, 128.134436, 128.137358, 129.131471, 129.134393, 129.13779, 129.140713, 130.134825, 130.137748, 130.141145, 130.144068, 131.13818, 131.141103, 131.1445, 131.147423, 132.141535, 132.144458, 132.147855, 132.150778, 133.14489, 133.147813, 133.15121, 133.154133, 134.148245, 134.151171, 134.154565, 134.157491, 135.1516, 135.154526, 135.160846});
     public final double[] reporterIons;
     public final double tagMass;
 
@@ -110,25 +112,28 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
   }
 
   protected MGFECleaner(double mzTolPpm) {
-    this.mzTolPpm = mzTolPpm;
+    mzTolerancePpm = mzTolPpm;
+    isobaricTags = null;
   }
 
-  public MGFECleaner(double mzTolPpm, String labelingMethodName) {
-    this.mzTolPpm = mzTolPpm;
+  public MGFECleaner(double mzTolerancePpm, String labelingMethodName) {
+    this.mzTolerancePpm = mzTolerancePpm;
     if ((labelingMethodName != null) && !labelingMethodName.isEmpty()) {
-      this.isobaricTags = IsobaricTag.valueOf(labelingMethodName.toUpperCase());
+      isobaricTags = IsobaricTag.valueOf(labelingMethodName.toUpperCase());
+    } else {
+      isobaricTags = null;
     }
-
   }
 
-  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm) throws InvalidMGFFormatException {
+  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm) throws IOException {
     super(srcFile, m_dstFile);
-    this.mzTolPpm = mzTolPpm;
+    mzTolerancePpm = mzTolPpm;
+    isobaricTags = null;
   }
 
-  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm, IsobaricTag tags) throws InvalidMGFFormatException {
+  public MGFECleaner(File srcFile, File m_dstFile, double mzTolPpm, IsobaricTag tags) throws IOException {
     super(srcFile, m_dstFile);
-    this.mzTolPpm = mzTolPpm;
+    mzTolerancePpm = mzTolPpm;
     this.isobaricTags = tags;
   }
 
@@ -144,7 +149,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
 
   @Override
   public String getMethodVersion() {
-    return "1.0";
+    return "1.1";
   }
 
   @Override
@@ -256,7 +261,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       // Filter immonium Ions
       if (p.mass < 160) {
           for (double ionMass : immoniumIonMasses) {
-            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolPpm) {
+            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolerancePpm) {
               p.used = true;
               break;
             } else if (ionMass > p.mass) {
@@ -268,7 +273,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       // Filter reporter ions if isobaricTags is defined
       if (isobaricTags != null) {
           for (double ionMass : reporterAssociatedIonMasses) {
-            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolPpm) {
+            if (1e6*Math.abs(ionMass - p.mass)/p.mass < mzTolerancePpm) {
               p.used = true;
               break;
             } else if (ionMass > p.mass) {
@@ -278,13 +283,10 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
       }
 
       if (!p.used) {
-        IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolPpm, parentCharge, peaksByIndex);
-//        if (patternMatch != null) {
-//          LOG.info("Peak ({}, {}) predicted to ({}, {}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), patternMatch.theoreticalPattern.charge());
-//        }
+        IsotopicPatternMatch patternMatch = predictIsotopicPattern(spectrumData, p.mass, mzTolerancePpm, parentCharge, peaksByIndex);
         if (patternMatch != null) {
           int charge = patternMatch.theoreticalPattern.charge();
-          LOG.info("pattern matching peak at ({},{}): ({},{}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), charge);
+          //LOG.info("pattern matching peak at ({},{}): ({},{}+)", p.mass, p.intensity, patternMatch.theoreticalPattern.monoMz(), charge);
           for(Optional<Integer> peakIndex : patternMatch.matchingPeaks) {
             if (!peakIndex.isEmpty()) {
               final Peak peak = peaksByIndex.get(peakIndex.get());
@@ -298,7 +300,7 @@ public class MGFECleaner extends MGFRewriter implements ISpectrumProcessor {
             final Integer peakIdx = patternMatch.matchingPeaks.get(0).get();
             Peak monoPeak = peaksByIndex.get(peakIdx);
             Peak newPeak = new Peak(monoPeak.mass*charge - (charge-1)* MolecularConstants.PROTON_MASS(), monoPeak.intensity, p.index);
-            LOG.info("Move peak ({},{},{}+) to ({},{}, 1+)", monoPeak.mass, monoPeak.intensity, charge, newPeak.mass, newPeak.intensity);
+            //LOG.info("Move peak ({},{},{}+) to ({},{}, 1+)", monoPeak.mass, monoPeak.intensity, charge, newPeak.mass, newPeak.intensity);
             result.add(newPeak);
           }
         } else {

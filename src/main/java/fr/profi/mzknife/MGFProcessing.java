@@ -2,15 +2,17 @@ package fr.profi.mzknife;
 
 import Preprocessing.Config;
 import Preprocessing.DeltaMassDB;
+import fr.profi.mgf.InvalidMGFFormatException;
 import fr.profi.mzknife.mgf.*;
 import fr.profi.mzknife.util.AbstractProcessing;
-import fr.profi.mzscope.InvalidMGFFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MGFProcessing extends AbstractProcessing {
@@ -109,6 +111,7 @@ public class MGFProcessing extends AbstractProcessing {
     mgfMerger.setFilterSpectrum(mgfMergerCommand.filter);
     mgfMerger.setReplaceFragments(mgfMergerCommand.replace);
     mgfMerger.rewriteMGF();
+    LOG.info("Merge done");
     mgfMerger.dumpMetric();
   }
 
@@ -127,14 +130,27 @@ public class MGFProcessing extends AbstractProcessing {
     } else {
       mgfCleaner = new MGFECleaner(mgfCleanerSrcFile, mgfCleanerDstFile, mgfCleanerCommand.mzTolPPM);
     }
+
+    mgfCleaner.setWorkersCount(mgfCleanerCommand.threads);
     mgfCleaner.rewriteMGF();
+    LOG.info("Cleaning done");
   }
 
   public static void computeMgfMetrics(CommandArguments.MgfMetricsCommand mgfMetricsCommand) throws InvalidMGFFormatException, IOException {
     File srcFile = new File(mgfMetricsCommand.inputFileName);
-    File destFile = getDestFile(mgfMetricsCommand.outputFileName, ".metrics.tsv", srcFile);
-    MGFMetrics mgfMetrics = new MGFMetrics(srcFile, destFile);
-    mgfMetrics.dumpMGFMetrics();
+    List<File> files = new ArrayList<>();
+    if (srcFile.isDirectory()) {
+      files = Arrays.asList(srcFile.listFiles(pathname -> pathname.isFile() && pathname.getName().toLowerCase().endsWith(".mgf")));
+    } else {
+      files.add(srcFile);
+    }
+    for (File file : files) {
+      File destFile = getDestFile(mgfMetricsCommand.outputFileName, ".metrics.tsv", file);
+      LOG.info("Start reading file {}", file.getName());
+      MGFMetrics mgfMetrics = new MGFMetrics(file, destFile);
+      LOG.info("... calculating metrics for file {}", file.getName());
+      mgfMetrics.dumpMGFMetrics();
+    }
   }
 
 
@@ -143,6 +159,7 @@ public class MGFProcessing extends AbstractProcessing {
     File mgfRecalDstFile = getDestFile(mgfRecalibrateCommand.outputFileName, ".recal.mgf", mgfRecalSrcFile);
     MGFRecalibrator mgfRecalibrator = new MGFRecalibrator(mgfRecalSrcFile, mgfRecalDstFile, mgfRecalibrateCommand.firstTime, mgfRecalibrateCommand.lastTime, mgfRecalibrateCommand.deltaMass);
     mgfRecalibrator.rewriteMGF();
+    LOG.info("Recalibration done");
   }
 
   public static void filterMgf(CommandArguments.MgfFilterCommand mgfFilterCommand) throws InvalidMGFFormatException, IOException {
@@ -165,6 +182,7 @@ public class MGFProcessing extends AbstractProcessing {
       filter.setCharges(charges2Keep);
     }
     filter.rewriteMGF();
+    LOG.info("Filtering done");
   }
 
 }

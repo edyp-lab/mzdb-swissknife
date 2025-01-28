@@ -41,15 +41,9 @@
         </dependency>
 
         <dependency>
-        <groupId>fr.profi</groupId>
-            <artifactId>mzscope</artifactId>
+            <groupId>fr.profi</groupId>
+            <artifactId>profi-proteomics-java</artifactId>
             <version>1.3.0-SNAPSHOT</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>

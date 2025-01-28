@@ -9,6 +9,7 @@ import fr.profi.mzdb.db.model.params.param.CVParam;
 import fr.profi.mzdb.db.model.params.param.UserParam;
 import fr.profi.mzdb.io.writer.mgf.MgfBoostPrecursorExtractor;
 import fr.profi.mzdb.model.*;
+import fr.profi.mzknife.util.ParamsHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +61,7 @@ public class MzDBMetrics {
         initReader();
 
       BufferedWriter writer = new BufferedWriter(new FileWriter(m_outputFile));
-      String[] columns = { "scan.id", "scan.rt", "master_scan.id", "master_scan.rt", "master_scan.peaks_count", "samecycle_scan.id", "samecycle_scan.rt", "samecycle_scan.peaks_count", "nearest_scan.id", "nearest_scan.rt", "nearest_scan.peaks_count"};
+      String[] columns = { "scan.id", "scan.rt", "master_scan.id", "master_scan.rt", "master_scan.peaks_count", "samecycle_scan.id", "samecycle_scan.rt", "samecycle_scan.peaks_count", "nearest_scan.id", "nearest_scan.rt", "nearest_scan.peaks_count", "header.moz", "header.charge"};
 
       writer.write(Arrays.stream(columns).collect(Collectors.joining(DELIMITER)));
       writer.newLine();
@@ -87,6 +88,9 @@ public class MzDBMetrics {
             strBuilder.append("NA").append(DELIMITER);
           }
         }
+
+        strBuilder.append(spHeader.getPrecursorMz()).append(DELIMITER);
+        strBuilder.append(spHeader.getPrecursorCharge()).append(DELIMITER);
 
         writer.write(strBuilder.toString());
         writer.newLine();
@@ -129,7 +133,7 @@ public class MzDBMetrics {
     float minrt = time - 5;
     float maxrt = time + 5;
 
-    UserParam masterScanUP = spectrumHeader.getScanList().getScans().get(0).getUserParam("[Thermo Trailer Extra]Master Scan Number:");
+    UserParam masterScanUP = spectrumHeader.getScanList().getScans().get(0).getUserParam(ParamsHelper.UP_MASTER_SCAN_NAME);
     Optional<SpectrumSlice> masterScanOpt = Optional.empty();
     if (masterScanUP != null) {
       int masterScanIndex = Integer.parseInt(masterScanUP.getValue());

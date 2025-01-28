@@ -1,10 +1,10 @@
 package fr.profi.mzknife;
 
+import fr.profi.mgf.InvalidMGFFormatException;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzknife.mgf.MGFWriter;
 import fr.profi.mzknife.mgf.maxquant.MaxQuantMSMSReader;
 import fr.profi.mzknife.util.AbstractProcessing;
-import fr.profi.mzscope.InvalidMGFFormatException;
-import fr.profi.mzscope.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
