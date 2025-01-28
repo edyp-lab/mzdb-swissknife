@@ -1,10 +1,10 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.mgf.InvalidMGFFormatException;
+import fr.profi.mgf.MGFReader;
+import fr.profi.ms.model.MSMSSpectrum;
+import fr.profi.ms.model.Peak;
 import fr.profi.mzknife.util.MGFUtils;
-import fr.profi.mzscope.InvalidMGFFormatException;
-import fr.profi.mzscope.MGFReader;
-import fr.profi.mzscope.MSMSSpectrum;
-import fr.profi.mzscope.Peak;
 
 import java.io.BufferedWriter;
 import java.io.File;

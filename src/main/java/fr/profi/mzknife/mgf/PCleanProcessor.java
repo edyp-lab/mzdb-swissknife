@@ -3,10 +3,10 @@ package fr.profi.mzknife.mgf;
 import Preprocessing.Config;
 import Preprocessing.JPeak;
 import Preprocessing.JSpectrum;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
 import fr.profi.mzdb.model.SpectrumData;
-import fr.profi.mzscope.MSMSSpectrum;
 import fr.profi.util.ms.package$;
 
 import java.io.File;

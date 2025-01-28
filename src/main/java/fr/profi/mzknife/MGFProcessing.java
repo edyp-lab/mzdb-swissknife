@@ -2,9 +2,9 @@ package fr.profi.mzknife;
 
 import Preprocessing.Config;
 import Preprocessing.DeltaMassDB;
+import fr.profi.mgf.InvalidMGFFormatException;
 import fr.profi.mzknife.mgf.*;
 import fr.profi.mzknife.util.AbstractProcessing;
-import fr.profi.mzscope.InvalidMGFFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

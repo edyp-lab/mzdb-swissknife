@@ -1,8 +1,8 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.mgf.MGFConstants;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzknife.util.RecalibrateUtil;
-import fr.profi.mzscope.MGFConstants;
-import fr.profi.mzscope.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

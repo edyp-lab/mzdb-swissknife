@@ -1,7 +1,7 @@
 package fr.profi.mzknife.mgf;
 
-import fr.profi.mzscope.MGFReader;
-import fr.profi.mzscope.MSMSSpectrum;
+import fr.profi.mgf.MGFReader;
+import fr.profi.ms.model.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

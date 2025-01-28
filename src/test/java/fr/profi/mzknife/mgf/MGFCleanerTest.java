@@ -3,10 +3,10 @@ package fr.profi.mzknife.mgf;
 import Preprocessing.Config;
 import Preprocessing.DeltaMassDB;
 import com.almworks.sqlite4java.SQLiteException;
+import fr.profi.mgf.MGFConstants;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.model.Spectrum;
-import fr.profi.mzscope.MGFConstants;
-import fr.profi.mzscope.MSMSSpectrum;
 import org.junit.Ignore;
 import org.junit.Test;
 

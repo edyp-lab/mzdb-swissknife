@@ -2,12 +2,12 @@ package fr.profi.mzknife.mgf;
 
 import fr.profi.chemistry.model.BiomoleculeAtomTable$;
 import fr.profi.chemistry.model.MolecularConstants;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.ms.model.TheoreticalIsotopePattern;
 import fr.profi.mzdb.algo.DotProductPatternScorer;
 import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
 import fr.profi.mzdb.model.SpectrumData;
-import fr.profi.mzscope.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;

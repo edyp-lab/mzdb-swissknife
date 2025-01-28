@@ -1,9 +1,9 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.mgf.InvalidMGFFormatException;
+import fr.profi.mgf.MGFReader;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzknife.util.MGFUtils;
-import fr.profi.mzscope.InvalidMGFFormatException;
-import fr.profi.mzscope.MGFReader;
-import fr.profi.mzscope.MSMSSpectrum;
 import fr.profi.util.metrics.Metric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

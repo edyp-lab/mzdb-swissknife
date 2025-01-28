@@ -1,6 +1,6 @@
 package fr.profi.mzknife.mgf;
 
-import fr.profi.mzscope.MSMSSpectrum;
+import fr.profi.ms.model.MSMSSpectrum;
 
 import java.io.*;
 import java.util.ArrayList;

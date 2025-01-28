@@ -1,8 +1,8 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.mgf.MGFConstants;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzdb.io.writer.mgf.MgfField;
-import fr.profi.mzscope.MGFConstants;
-import fr.profi.mzscope.MSMSSpectrum;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
