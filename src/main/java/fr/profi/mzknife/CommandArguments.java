@@ -20,7 +20,6 @@ public class CommandArguments {
 
   public final static String MZDB_METRICS_COMMAND_NAME = "metrics";
   public final static String CREATE_MGF_COMMAND_NAME = "create_mgf";
-
   public final static String PCLEAN_COMMAND_NAME = "pclean";
 
   public final static String MATCH_IONS_COMMAND_NAME = "match_ions";
@@ -379,6 +378,9 @@ public class CommandArguments {
     @Parameter(names = {"-ftdb","--featuredb_file"}, description = "featuredb containing matched features and peakels", required = false, order = 2)
     public String featureDbFile;
 
+    @Parameter(names = {"-cf", "--columns"}, description = "Columns configuration file", required = true)
+    public String columnsConfig;
+
     @Parameter(names = {"-o","--output"}, description = "matching peakels", required = false, order = 1)
     public String outputFile;
 
@@ -403,6 +405,12 @@ public class CommandArguments {
 
     @Parameter(names = {"-o","--output"}, description = "matching peakels", required = false, order = 1)
     public String outputFile;
+
+    @Parameter(names = {"-cf", "--columns"}, description = "Columns configuration file", required = true)
+    public String columnsConfig;
+
+    @Parameter(names = {"-g"}, description="Group the matched psms into ions", required = false)
+    public boolean groupIons = false;
 
     @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for matching ions.", required = false)
     public Float mzTolPPM = 5.0f;

@@ -4,12 +4,12 @@ import fr.profi.mzdb.model.Feature;
 import fr.profi.mzdb.model.Peakel;
 import scala.Tuple2;
 
-public class FeatureWrapper extends Feature {
+public class FeatureAdapter extends Feature {
 
   private Peakel basePeakel;
   private int basePeakelIndex = 0;
 
-  public FeatureWrapper(int id, double mz, int charge, Tuple2<Peakel, Object>[] indexedPeakels, boolean isPredicted, long[] ms2SpectrumIds) {
+  public FeatureAdapter(int id, double mz, int charge, Tuple2<Peakel, Object>[] indexedPeakels, boolean isPredicted, long[] ms2SpectrumIds) {
     super(id, mz, charge, indexedPeakels, isPredicted, ms2SpectrumIds);
 
     double approxMass = mz * charge;
@@ -32,5 +32,10 @@ public class FeatureWrapper extends Feature {
   @Override
   public int getBasePeakelIndex() {
     return basePeakelIndex;
+  }
+
+  @Override
+  public float getElutionTime() {
+    return super.getBasePeakel().getElutionTime();
   }
 }

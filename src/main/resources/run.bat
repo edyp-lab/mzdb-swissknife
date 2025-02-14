@@ -16,7 +16,7 @@ IF "%1" == "mzdb" (
 
 ) ELSE IF "%1" == "peakels" (
 
-    .\jdk\bin\java -Xmx3G -Duser.country=US  -Duser.language=en -cp "lib/*;mzdb-swissknife-${pom.version}.jar" -Dlogback.configurationFile=config/logback.xml fr.profi.mzknife.PeakelsProcessing  %ALL_BUT_FIRST%
+    .\jdk\bin\java -Xmx3G -Duser.country=US  -Duser.language=en -DmaxIsotopicChargeState=5 -cp "lib/*;mzdb-swissknife-${pom.version}.jar" -Dlogback.configurationFile=config/logback.xml fr.profi.mzknife.PeakelsProcessing  %ALL_BUT_FIRST%
 
  ) ELSE (
 
