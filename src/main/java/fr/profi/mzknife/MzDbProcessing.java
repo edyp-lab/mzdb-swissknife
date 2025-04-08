@@ -201,11 +201,9 @@ public class MzDbProcessing extends AbstractProcessing {
       precursorComputation =  new MgfBoostPrecursorExtractor(mzDBCreateMgfCommand.mzTolPPM,
                                                              mzDBCreateMgfCommand.useHeader,
                                                              mzDBCreateMgfCommand.useSelectionWindow,
-                                                             mzDBCreateMgfCommand.swMaxPrecursorsCount,
-                                                             mzDBCreateMgfCommand.swIntensityThreshold,
                                                              scanSelector,
                                                              mzDBCreateMgfCommand.pifThreshold,
-                                                             mzDBCreateMgfCommand.rankThreshold);
+                                                             mzDBCreateMgfCommand.takeThreshold);
     } else {
       throw new IllegalArgumentException("Can't create the MGF file, invalid precursor m/z computation method");
     }
