@@ -40,5 +40,11 @@
       <outputDirectory></outputDirectory>
     </fileSet>
 
+    <!-- Config files-->
+    <fileSet>
+      <directory>${project.build.directory}/config</directory>
+      <outputDirectory>/config</outputDirectory>
+    </fileSet>
+
   </fileSets>
 </assembly>
