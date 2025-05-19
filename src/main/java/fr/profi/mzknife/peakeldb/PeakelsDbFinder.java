@@ -219,8 +219,8 @@ public class PeakelsDbFinder {
               Option$.MODULE$.apply(rTree),
               putativeFt.mz() - ISOTOPE_PATTERN_HALF_MZ_WINDOW,
               putativeFt.mz() + ISOTOPE_PATTERN_HALF_MZ_WINDOW,
-              putativeFt.elutionTime() - putativeFt.elutionTimeTolerance(),
-              putativeFt.elutionTime() + putativeFt.elutionTimeTolerance());
+              putativeFt.elutionTime() - Math.max(putativeFt.elutionTimeTolerance(), 60),
+              putativeFt.elutionTime() + Math.max(putativeFt.elutionTimeTolerance(), 60));
 
       List<Peakel> coelutingPeakels = Arrays.asList(peakels);
 
