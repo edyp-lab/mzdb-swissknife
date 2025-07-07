@@ -36,10 +36,15 @@ public class AbstractProcessing {
     jCmd.addCommand(command);
   }
 
-  protected static File getDestFile(String outputFile, String defaultExtension, File inputFile){
+  protected static File inferFile(String outputFile, String defaultExtension, File inputFile){
     String inputFileName = inputFile.getAbsolutePath();
     String dstFilePath = (outputFile != null) ? outputFile : inputFileName.substring(0,inputFileName.lastIndexOf('.')) + defaultExtension;
     File dstFile = new File(dstFilePath);
+    return  dstFile;
+  }
+
+  protected static File getDestFile(String outputFile, String defaultExtension, File inputFile){
+    File dstFile = inferFile(outputFile, defaultExtension, inputFile);
     if (dstFile.exists()) {
       LOG.error("Destination file {} already exists, remove it before running rewrite command", dstFile.getAbsolutePath());
       System.exit(1);

@@ -56,6 +56,20 @@ run.bat maxquant create_mgf -i1 Xpl1_002790.HCD.FTMS.sil0.apl -i2 Xpl1_002790.HC
 
 ### Peakels command examples
 
+To match identified psms to elution peaks (peakels) from a peakelDb file, type:
+
+```
+run.bat peakels match_psms -mzdb QEKAC160601_18.mzdb -pkdb QEKAC160601_18.raw-4873932527404489086.sqlite -psms identifiedPsms.csv -cf psms.columns -mztol 5.0 -o matchedPSMS.tsv
+```
+
+The `identifiedPsms.csv` file must contain the PSMS that will be matched to the peakels. This file must contain columns corresponding to the m/z, charge state, and retention time (in minutes) of each 
+PSMs. optional columns corresponding to the sequence and list of modifications can be supplied. An ID can also be supplied, if not an ID is automatically generated. The column separator is the semi colon (;).
+
+The `psms.columns` file is used to specify the rank (or column number, starting from 0 for the first column) of each expected column (ID, SEQ, PTMS, MOZ, CHARGE, RT). The column number is specified 
+as `COLUMN = <number>`.
+
+The `-g` option can be used to group PSMs into ions in the output. If so, the SEQ and PTMS columns are required to generate the key (modified sequenceà) that will be used to group PSMs. 
+
 To search for putative features in a peakelDb file, type:
 
 ```

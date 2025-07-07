@@ -15,6 +15,7 @@ public class CommandArguments {
   public final static String FILTER_COMMAND_NAME = "filter";
   public final static String CLEAN_COMMAND_NAME = "eclean";
   public final static String MERGE_COMMAND_NAME = "merge";
+  public final static String DETECT_PEAKELS_COMMAND_NAME = "detect_peakels";
 
   public final static String MGF_METRICS_COMMAND_NAME = "metrics";
 
@@ -24,7 +25,7 @@ public class CommandArguments {
 
   public final static String MATCH_IONS_COMMAND_NAME = "match_ions";
   public final static String MATCH_PSMS_COMMAND_NAME = "match_psms";
-
+  public final static String QUANTIFY_PSMS_COMMAND_NAME = "quantify_psms";
 
   @Parameters(commandNames =  {RECALIBRATE_COMMAND_NAME}, commandDescription = "Recalibrate mzDB file using delta mass. Recalibration will be applied only on specified scans range.", separators = "=")
   public static class MzDBRecalibrateCommand {
@@ -246,6 +247,45 @@ public class CommandArguments {
 
   }
 
+  @Parameters(commandNames =  {DETECT_PEAKELS_COMMAND_NAME}, commandDescription = "Detect peakels from an mzdb inFile.", separators = "=")
+  public static class MzDBPeakelsDetectorCommand {
+
+    @Parameter(names = {"-mzdb", "--mzdb_file_path"}, description = "mzDB file to perform peaklist extraction", required = true)
+    public String mzdbFile;
+
+    @Parameter(names = {"-o", "--output_file_path"}, description = "PeakelDb output file path", required = false)
+    public String outputFile;
+
+    @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for peakels detection.", required = false)
+    public Float mzTolPPM = 10.0f;
+
+    @Parameter(names = {"-p", "--intensity_percentile"}, description = "intensity percentil cutoff.", required = false)
+    public Float intensityPercentile = 0.9f;
+
+    @Parameter(names = {"-mg", "--max_consecutive_gaps"}, description = "maximum number of consecutive gaps.", required = false)
+    public Integer maxConsecutiveGaps = 3;
+
+    @Parameter(names = {"-mmd", "--mini_maxi_distance"}, description = "minimum to maximum distance.", required = false)
+    public Integer miniMaxiDistanceThresh = 3;
+
+    @Parameter(names = {"-mp", "--mini_peaks_count"}, description = "minimum peaks count.", required = false)
+    public Integer minPeaksCount = 5;
+
+    @Parameter(names = {"-mmr", "--min_max_ratio_threshold"}, description = "relative ratio between maximum and minimum intensities to consider valley.", required = false)
+    public Float maxIntensityRelThresh = 0.75f;
+
+    @Parameter(names = {"-b", "--baseline_remover"}, description = "Remove baseline", arity = 1, required = false)
+    public Boolean useBaselineRemover = false;
+
+    @Parameter(names = {"-s", "--smoothing"}, description = "Smooth peakels before peaks/valley detection", arity = 1, required = false)
+    public Boolean useSmoothing = true;
+
+    @Parameter(names = {"-h", "--help"}, help = true)
+    public boolean help;
+
+  }
+
+
   @Parameters(commandNames = {CREATE_MGF_COMMAND_NAME}, commandDescription = "Converts MaxQuant generated .apl files into MGF file", separators = "=")
   public static class MaxQuantMGFCommand {
 
@@ -375,17 +415,20 @@ public class CommandArguments {
     @Parameter(names = {"-ions","--ions_file"}, description = "putative ions to search for in the peakeldb", required = true, order = 1)
     public String putativeIonsFile;
 
-    @Parameter(names = {"-ftdb","--featuredb_file"}, description = "featuredb containing matched features and peakels", required = false, order = 2)
+    @Parameter(names = {"-ftdb","--featuredb_file"}, description = "featuredb containing already matched features and peakels", required = false, order = 2)
     public String featureDbFile;
 
     @Parameter(names = {"-cf", "--columns"}, description = "Columns configuration file", required = true)
     public String columnsConfig;
 
-    @Parameter(names = {"-o","--output"}, description = "matching peakels", required = false, order = 1)
+    @Parameter(names = {"-o","--output"}, description = "matching peakels output file name", required = false, order = 1)
     public String outputFile;
 
     @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for matching ions.", required = false)
     public Float mzTolPPM = 5.0f;
+
+    @Parameter(names = {"-oup"}, description="Output unassigned ions", required = false)
+    public boolean outputUnassignedIons = false;
 
     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
@@ -397,8 +440,8 @@ public class CommandArguments {
     @Parameter(names = {"-mzdb","--mzdbdb_file"}, description = "mzdb input file ", required = true, order = 0)
     public String mzDbFile;
 
-    @Parameter(names = {"-pkdb","--peakeldb_file"}, description = "peakeldb input file ", required = true, order = 0)
-    public String peakelDbFile;
+    @Parameter(names = {"-pkdb","--peakeldb_file"}, description = "peakeldb input file ", required = false, order = 0)
+    public String peakelDbFile = null;
 
     @Parameter(names = {"-psms","--psms_file"}, description = "identified PSMs to search for in the peakeldb", required = true, order = 1)
     public String psmsFile;
@@ -412,8 +455,36 @@ public class CommandArguments {
     @Parameter(names = {"-g"}, description="Group the matched psms into ions", required = false)
     public boolean groupIons = false;
 
+    @Parameter(names = {"-oup"}, description="Output unassigned PSMs", required = false)
+    public boolean outputUnassignedPsms = false;
+
     @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for matching ions.", required = false)
     public Float mzTolPPM = 5.0f;
+
+    @Parameter(names = {"-h", "--help"}, help = true)
+    public boolean help;
+  }
+
+  @Parameters(commandNames = {QUANTIFY_PSMS_COMMAND_NAME}, commandDescription = "Quantify PSMs from mzdb files", separators = "=")
+  public static class QuantifyPsmsCommand {
+
+    @Parameter(names = {"-i","--input_file"}, description = "identified PSMs to quantify", required = true, order = 1)
+    public String psmsFile;
+
+    @Parameter(names = {"-d","--directory"}, description = "directory where mzdb/peakeldb files will be searched", required = true, order = 0)
+    public String directory;
+
+    @Parameter(names = {"-o","--output"}, description = "quantified PSMs output", required = false, order = 1)
+    public String outputFile;
+
+    @Parameter(names = {"-cf", "--columns"}, description = "Columns configuration file", required = true)
+    public String columnsConfig;
+
+    @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for matching PSMs.", required = false)
+    public Float mzTolPPM = 5.0f;
+
+    @Parameter(names = {"-s"}, description="simulate the global process", required = false)
+    public boolean simulate = false;
 
     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;

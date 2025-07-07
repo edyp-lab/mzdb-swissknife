@@ -33,6 +33,7 @@
   </appender>
 
   <!-- DOMAIN-DEPENDANT LOGGER LEVELS -->
+  <logger name="fr.profi.mzdb" level="INFO"/>
   <logger name="fr.profi" level="DEBUG" />
   <logger name="fr.proline" level="DEBUG" />
 
