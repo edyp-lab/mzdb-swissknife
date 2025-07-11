@@ -88,12 +88,19 @@ public class PutativeFeatureWrapper extends PutativeFeature {
   public void setSequenceModifications(String sequence, String modification) {
     this.sequence = sequence;
     this.modification = modification;
+    updateKeys(false);
+  }
+
+  public void updateKeys(boolean useCvValue) {
     StringBuilder stb = new StringBuilder(this.sequence);
-    if (modification != null) {
+    if (this.modification != null) {
       stb.append('.').append(this.modification);
     }
     this.peptideKey = stb.toString();
     stb.append('.').append(charge());
+    if (useCvValue && this.cvValue != null) {
+      stb.append('.').append(this.cvValue);
+    }
     this.ionKey = stb.toString();
   }
 

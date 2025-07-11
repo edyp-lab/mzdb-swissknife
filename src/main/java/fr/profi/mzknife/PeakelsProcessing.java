@@ -136,28 +136,10 @@ public class PeakelsProcessing extends AbstractProcessing {
     final File psmsFile = new File(command.psmsFile);
     final InputSource source = readPutativeFeatures(psmsFile, columns);
 
+    // force ion key update using the CV value if present
+    source.getPutativeFeatures().forEach(pf -> pf.updateKeys(true));
+
     final Map<String, List<PutativeFeatureWrapper>> putativeFtsByRun = source.getPutativeFeatures().stream().collect(Collectors.groupingBy(pf -> pf.getRawSourceFile()));
-    final List<String> allRuns = putativeFtsByRun.keySet().stream().sorted().toList();
-
-    // Detect missing ions
-    long startGrouping = System.currentTimeMillis();
-    int missingCount = 0;
-    final Map<String, List<PutativeFeatureWrapper>> psmsByIonKey = source.getPutativeFeatures().stream().collect(Collectors.groupingBy(p -> p.getIonKey()));
-
-    for (Map.Entry<String, List<PutativeFeatureWrapper>> e : psmsByIonKey.entrySet()) {
-      final List<String> identifiedRuns = e.getValue().stream().map(PutativeFeatureWrapper::getRawSourceFile).distinct().sorted().toList();
-      if (identifiedRuns.size() != allRuns.size()) {
-        TreeSet<String> missingRuns = new TreeSet<>(allRuns);
-        missingRuns.removeAll(new TreeSet<>(identifiedRuns));
-        if (missingRuns.size() > 0) {
-          missingCount += missingRuns.size();
-//          LOG.info("{} missing runs detected", missingRuns.size());
-        }
-      }
-    }
-
-    LOG.info("Missing detection duration : {} ms to generate {} ions from {} psms, {} missing detected", (System.currentTimeMillis() - startGrouping), psmsByIonKey.size(), source.getPutativeFeatures().size(),  missingCount);
-
 
     Map<String, File> mzdbFilesByRawFileName = new HashMap<>();
     // check that mzdb file can be found
@@ -191,6 +173,46 @@ public class PeakelsProcessing extends AbstractProcessing {
     }
 
     PeakelsDbFinder.writeFeatures(outputFile, psms, source.getOriginalLines(), source.getOriginalHeader(), true);
+
+
+    final List<String> allRuns = putativeFtsByRun.keySet().stream().sorted().toList();
+    // Detect missing ions
+    long startGrouping = System.currentTimeMillis();
+    int missingCount = 0;
+    final Map<String, List<PutativeFeatureWrapper>> psmsByIonKey = source.getPutativeFeatures().stream().collect(Collectors.groupingBy(p -> p.getIonKey()));
+    final Map<String, List<PutativeFeatureWrapper>> missingIonsByRun = new HashMap<>();
+
+    for (Map.Entry<String, List<PutativeFeatureWrapper>> e : psmsByIonKey.entrySet()) {
+      final List<String> identifiedRuns = e.getValue().stream().map(PutativeFeatureWrapper::getRawSourceFile).distinct().sorted().toList();
+      if (identifiedRuns.size() != allRuns.size()) {
+        TreeSet<String> missingRuns = new TreeSet<>(allRuns);
+        missingRuns.removeAll(new TreeSet<>(identifiedRuns));
+        if (missingRuns.size() > 0) {
+          missingCount += missingRuns.size();
+//          LOG.info("{} missing runs detected", missingRuns.size());
+          for (String run : missingRuns) {
+            final List<PutativeFeatureWrapper> missingIons = missingIonsByRun.getOrDefault(run, new ArrayList<>());
+            final List<PutativeFeatureWrapper> putativeFeatures = e.getValue();
+            final List<PutativeFeatureWrapper> matchedPutativefeatures = putativeFeatures.stream().filter(ft -> !ft.getExperimentalFeatures().isEmpty()).collect(Collectors.toList());
+            final PutativeFeatureWrapper firstFeature = e.getValue().get(0);
+
+            // Creates a clone missing Feature ion from quantified ones
+            PutativeFeatureWrapper missingFeature = new PutativeFeatureWrapper(-missingCount, e.getValue().stream().mapToDouble(PutativeFeature::mz).average().getAsDouble(), firstFeature.charge());
+            missingFeature.setElutionTime((float)matchedPutativefeatures.stream().mapToDouble(pf -> pf.getRepresentativeExperimentalFeature().getElutionTime()).average().getAsDouble());
+            missingFeature.setSequenceModifications(firstFeature.getSequence(), firstFeature.getModification());
+            missingFeature.setCvValue(firstFeature.getCvValue());
+            // TODO use a command parameter fro a constant time tolerance
+            missingFeature.setElutionTimeTolerance(5*60);
+
+            missingIons.add(missingFeature);
+            missingIonsByRun.put(run, missingIons);
+          }
+        }
+      }
+    }
+    LOG.info("Missing detection duration : {} ms to generate {} ions from {} psms, {} missing detected", (System.currentTimeMillis() - startGrouping), psmsByIonKey.size(), source.getPutativeFeatures().size(),  missingCount);
+
+    // TODO match ions
 
   }
 
