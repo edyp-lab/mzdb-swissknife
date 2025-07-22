@@ -3,10 +3,8 @@ package fr.profi.mzknife.peakeldb;
 import fr.profi.mzdb.model.Feature;
 import fr.profi.mzdb.model.PutativeFeature;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class PutativeFeatureWrapper extends PutativeFeature {
 
@@ -57,14 +55,11 @@ public class PutativeFeatureWrapper extends PutativeFeature {
     return experimentalFeatures;
   }
 
-  public boolean addExperimentalFeature(Feature feature) {
-     boolean added = experimentalFeatures.add(feature);
-     if (added) {
-       if ((representativeExperimentalFt == null) || (feature.getBasePeakel().getApexIntensity() > representativeExperimentalFt.getBasePeakel().getApexIntensity())) {
-         representativeExperimentalFt = feature;
-       }
-     }
-     return added;
+  public void addExperimentalFeature(Feature feature) {
+    experimentalFeatures.add(feature);
+    if ((representativeExperimentalFt == null) || (feature.getBasePeakel().getApexIntensity() > representativeExperimentalFt.getBasePeakel().getApexIntensity())) {
+      representativeExperimentalFt = feature;
+    }
   }
 
   public void setGroupedFeatures(List<PutativeFeatureWrapper> groupedFeatures) {
@@ -104,6 +99,10 @@ public class PutativeFeatureWrapper extends PutativeFeature {
     this.ionKey = stb.toString();
   }
 
+  public boolean isMatched() {
+    return experimentalFeatures != null && !experimentalFeatures.isEmpty();
+  }
+
   public Optional<Boolean> isReliable() {
     return isReliable;
   }
@@ -127,4 +126,5 @@ public class PutativeFeatureWrapper extends PutativeFeature {
   public void setRawSourceFile(String rawSourceFile) {
     this.rawSourceFile = rawSourceFile;
   }
+
 }

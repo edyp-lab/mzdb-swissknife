@@ -453,7 +453,7 @@ public class CommandArguments {
     public String columnsConfig;
 
     @Parameter(names = {"-g"}, description="Group the matched psms into ions", required = false)
-    public boolean groupIons = false;
+    public boolean groupPsms = false;
 
     @Parameter(names = {"-oup"}, description="Output unassigned PSMs", required = false)
     public boolean outputUnassignedPsms = false;
@@ -483,8 +483,17 @@ public class CommandArguments {
     @Parameter(names = {"-mztol", "--mz_tol_ppm"}, description = "m/z tolerance used for matching PSMs.", required = false)
     public Float mzTolPPM = 5.0f;
 
-    @Parameter(names = {"-s"}, description="simulate the global process", required = false)
-    public boolean simulate = false;
+    @Parameter(names = {"-rttol", "--rt_tol"}, description = "RT tolerance (in secondes)).", required = false)
+    public Integer rtTolerance = 300;
+
+    @Parameter(names = {"-g"}, description="Group the Psms of a run into ions ", required = false)
+    public boolean groupPsms = false;
+
+    @Parameter(names = {"-xa"}, description="cross assign ions", required = false)
+    public boolean crossAssign = false;
+
+    @Parameter(names = {"-wmp"}, description="write matched PSMs", required = false)
+    public boolean writeMatchedPsms = false;
 
     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;

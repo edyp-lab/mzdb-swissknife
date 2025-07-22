@@ -1,13 +1,29 @@
 package fr.profi.mzknife.mzdb;
 
+import com.almworks.sqlite4java.SQLiteConnection;
+import com.almworks.sqlite4java.SQLiteException;
+import fr.profi.mzdb.*;
+import fr.profi.mzdb.db.model.params.param.CVEntry;
+import fr.profi.mzdb.io.reader.iterator.LcMsRunSliceIterator;
 import fr.profi.mzdb.io.writer.mgf.*;
+import fr.profi.mzdb.model.Peakel;
+import fr.profi.mzdb.model.RunSlice;
+import fr.profi.mzdb.model.RunSliceData;
+import fr.profi.mzdb.model.SpectrumSlice;
+import fr.profi.mzdb.peakeldb.io.PeakelDbWriter;
 import fr.profi.mzknife.mgf.PCleanProcessor;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Option;
 
 import java.io.File;
+import java.io.StreamCorruptedException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.function.Consumer;
 
 public class MzDbProcessingTest {
 

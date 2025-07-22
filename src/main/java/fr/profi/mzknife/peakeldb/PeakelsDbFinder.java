@@ -42,8 +42,6 @@ import static scala.collection.JavaConversions.asJavaIterable;
 public class PeakelsDbFinder {
 
   private final static Logger LOG = LoggerFactory.getLogger(PeakelsDbFinder.class);
-  private static final CharSequence DELIMITER = ";";
-  private static final DecimalFormat DF = new DecimalFormat("#");
   private static final int ISOTOPE_PATTERN_HALF_MZ_WINDOW = 5;
 
   private final File peakelDbFile;
@@ -124,31 +122,10 @@ public class PeakelsDbFinder {
     LOG.info("Total number of matched peptides {}", matchedPsms2.stream().map(p -> p.getPeptideKey()).distinct().count());
 
     if (groupPSMs) {
-      long startGrouping = System.currentTimeMillis();
-      final Map<String, List<PutativeFeatureWrapper>> psmsByIonKey = psms.stream().collect(Collectors.groupingBy(p -> p.getIonKey()));
-
-      final List<PutativeFeatureWrapper> ions = new ArrayList<>(psmsByIonKey.size());
-
-      for (Map.Entry<String, List<PutativeFeatureWrapper>> e : psmsByIonKey.entrySet()) {
-
-        final List<PutativeFeatureWrapper> putativeFeatures = e.getValue();
-        final List<PutativeFeatureWrapper> matchedPutativefeatures = putativeFeatures.stream().filter(ft -> !ft.getExperimentalFeatures().isEmpty()).collect(Collectors.toList());
-        final Optional<PutativeFeatureWrapper> representativeFt = matchedPutativefeatures.stream().max(Comparator.comparing(ft -> ft.getRepresentativeExperimentalFeature().getBasePeakel().getApexIntensity()));
-
-        if (representativeFt.isPresent()) {
-          representativeFt.get().setGroupedFeatures(matchedPutativefeatures);
-          ions.add(representativeFt.get());
-        } else {
-          LOG.info("No matched representative Feature found for this ion {}. Use the first non-matched as representative", e.getKey());
-          ions.add(putativeFeatures.get(0));
-        }
-      }
-      LOG.info("Grouping Duration : {} ms to generate {} ions", (System.currentTimeMillis() - startGrouping), ions.size());
-      return ions;
+      return FeaturesHelper.groupByIonKeys(psms);
     }
 
     return psms;
-
   }
 
 
@@ -255,81 +232,6 @@ public class PeakelsDbFinder {
       LOG.error("Error while reading featureDb file " + assignedPeakelsFile.getAbsolutePath(), e);
     }
     return assignedPeakelIds;
-  }
-
-  public static void writeFeatures(File outputFile,
-                                   List<PutativeFeatureWrapper> putativeFeatures,
-                                   Map<Integer, String> originalLines,
-                                   String originalHeader,
-                                   boolean outputUnassigned) throws IOException {
-
-    BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
-    String[] columns = {"ion.id", "ion.mz", "ion.charge", "ion.rt", "ft.intensity", "ft.area", "ft.elution_time", "ft.mz", "peakels.count", "peakel.ids", "ft.base_peakel_idx", "ft.isReliable", "cluster.peakels.ids", "ft.faims.cv"};
-
-    writer.write(Arrays.stream(columns).collect(Collectors.joining(DELIMITER)));
-    writer.write(DELIMITER+originalHeader);
-    writer.newLine();
-
-    for (PutativeFeatureWrapper putativeFt : putativeFeatures) {
-        Feature feature = putativeFt.getRepresentativeExperimentalFeature();
-        StringBuilder strBuilder = new StringBuilder();
-
-        if (feature != null) {
-          strBuilder.append(putativeFt.id()).append(DELIMITER);
-          strBuilder.append(putativeFt.getMz()).append(DELIMITER);
-          strBuilder.append(putativeFt.charge()).append(DELIMITER);
-          strBuilder.append(putativeFt.elutionTime()).append(DELIMITER);
-          strBuilder.append(feature.getBasePeakel().getApexIntensity()).append(DELIMITER);
-          strBuilder.append(feature.getBasePeakel().getArea()).append(DELIMITER);
-          strBuilder.append(feature.getElutionTime()).append(DELIMITER);
-          strBuilder.append(feature.getMz()).append(DELIMITER);
-          strBuilder.append(feature.getPeakels().length).append(DELIMITER);
-          strBuilder.append(Arrays.stream(feature.getPeakels()).map(p -> Integer.toString(p.getId())).collect(Collectors.joining(", ", "{", "}"))).append(DELIMITER);
-          strBuilder.append(feature.getBasePeakelIndex());
-          if (putativeFt.isReliable().isPresent()) {
-            strBuilder.append(DELIMITER).append(putativeFt.isReliable().get()).append(DELIMITER);
-          } else {
-            strBuilder.append(DELIMITER).append("").append(DELIMITER);
-          }
-
-          if (putativeFt.getGroupedFeatures() != null) {
-            strBuilder.append(putativeFt.getGroupedPeakelIds().stream().map(i -> Integer.toString(i)).collect(Collectors.joining(", ", "{", "}")));
-          } else {
-            strBuilder.append("");
-          }
-
-          if (putativeFt.getCvValue() != null) {
-            strBuilder.append(DELIMITER).append(Float.valueOf(putativeFt.getCvValue()).intValue());
-          } else {
-            strBuilder.append(DELIMITER).append("");
-          }
-
-          strBuilder.append(DELIMITER);
-          final String s = originalLines.get(putativeFt.id());
-          if (s != null) {
-            strBuilder.append(s);
-          }
-
-        } else if (outputUnassigned) {
-            // no experimental feature found, output empty columns except for the ID column
-          strBuilder.append(putativeFt.id()).append(DELIMITER);
-          for(int i = 1; i < columns.length; i++) {
-              strBuilder.append("").append(DELIMITER);
-            }
-          final String s = originalLines.get(putativeFt.id());
-          if (s != null) {
-            strBuilder.append(s);
-          }
-        }
-
-        if (!strBuilder.isEmpty()) {
-          writer.write(strBuilder.toString());
-          writer.newLine();
-        }
-
-    }
-    writer.flush();
-    writer.close();
   }
 
 
