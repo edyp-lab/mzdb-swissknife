@@ -1,0 +1,136 @@
+package fr.profi.mzknife.peakeldb;
+
+import fr.profi.mzdb.model.Feature;
+import fr.profi.mzdb.model.PutativeFeature;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class PutativeFeatureWrapper extends PutativeFeature {
+
+  public enum Type { PROVIDED, CROSS_ASSIGNED}
+  private Type type = Type.PROVIDED;
+  private String ionKey;
+  private String sequence;
+  private String modification;
+  private String rawSourceFile;
+
+  private Feature representativeExperimentalFt;
+  private List<Feature> experimentalFeatures = new ArrayList<>(5);
+  private List<PutativeFeatureWrapper> groupedFeatures = null;
+  private Optional<Boolean> isReliable = Optional.empty();
+
+  private String peptideKey;
+  private String cvValue = null;
+
+  public PutativeFeatureWrapper(int id, double mz, int charge) {
+    super(id, mz, charge);
+  }
+
+  public Type getType() {
+    return type;
+  }
+
+  public void setType(Type type) {
+    this.type = type;
+  }
+
+  public String getSequence() {
+    return sequence;
+  }
+
+  public String getModification() {
+    return modification;
+  }
+
+  public String getIonKey() {
+    return ionKey;
+  }
+
+  public String getPeptideKey() {
+    return peptideKey;
+  }
+
+  public List<Feature> getExperimentalFeatures() {
+    return experimentalFeatures;
+  }
+
+  public void addExperimentalFeature(Feature feature) {
+    experimentalFeatures.add(feature);
+    if ((representativeExperimentalFt == null) || (feature.getBasePeakel().getApexIntensity() > representativeExperimentalFt.getBasePeakel().getApexIntensity())) {
+      representativeExperimentalFt = feature;
+    }
+  }
+
+  public void setGroupedFeatures(List<PutativeFeatureWrapper> groupedFeatures) {
+    this.groupedFeatures = groupedFeatures;
+  }
+
+  public List<PutativeFeatureWrapper> getGroupedFeatures() {
+    return groupedFeatures;
+  }
+
+  public List<Integer> getGroupedPeakelIds() {
+    if (groupedFeatures == null)
+      return null;
+    return groupedFeatures.stream().flatMap(pf -> pf.getExperimentalFeatures().stream().flatMap(f -> Arrays.stream(f.getPeakels()).map(peakel -> peakel.getId()))).distinct().toList();
+  }
+
+  public Feature getRepresentativeExperimentalFeature() {
+    return representativeExperimentalFt;
+  }
+
+  public void setSequenceModifications(String sequence, String modification) {
+    this.sequence = sequence;
+    this.modification = modification;
+    updateKeys(false);
+  }
+
+  /**
+   * Updates the `peptideKey` and `ionKey` fields of this instance based on the current sequence and modification (for
+   * `peptideKey`) and sequence, modification, charge, and optionally the `cvValue` field for `ionKey`.
+   *
+   * @param useCvValue a boolean flag that determines whether the `cvValue` field should be included in the `ionKey`.
+   */
+  public void updateKeys(boolean useCvValue) {
+    StringBuilder stb = new StringBuilder(this.sequence);
+    if (this.modification != null) {
+      stb.append('.').append(this.modification);
+    }
+    this.peptideKey = stb.toString();
+    stb.append('.').append(charge());
+    if (useCvValue && this.cvValue != null) {
+      stb.append('.').append(this.cvValue);
+    }
+    this.ionKey = stb.toString();
+  }
+
+  public boolean isMatched() {
+    return experimentalFeatures != null && !experimentalFeatures.isEmpty();
+  }
+
+  public Optional<Boolean> isReliable() {
+    return isReliable;
+  }
+
+  public void setIsReliable(Boolean isReliable) {
+    this.isReliable = Optional.of(isReliable);
+  }
+
+  public void setCvValue(String cvValue) {
+    this.cvValue = cvValue;
+  }
+
+  public String getCvValue() {
+    return cvValue;
+  }
+
+  public String getRawSourceFile() {
+    return rawSourceFile;
+  }
+
+  public void setRawSourceFile(String rawSourceFile) {
+    this.rawSourceFile = rawSourceFile;
+  }
+
+}

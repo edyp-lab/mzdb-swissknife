@@ -1,11 +1,17 @@
 package fr.profi.mzknife;
 
+import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.beust.jcommander.ParameterException;
 import com.typesafe.config.ConfigFactory;
+import fr.profi.mzdb.FeatureDetectorConfig;
+import fr.profi.mzdb.MzDbFeatureDetector;
 import fr.profi.mzdb.MzDbReader;
+import fr.profi.mzdb.SmartPeakelFinderConfig;
 import fr.profi.mzdb.db.model.Software;
 import fr.profi.mzdb.io.writer.mgf.*;
+import fr.profi.mzdb.model.Peakel;
+import fr.profi.mzdb.peakeldb.io.PeakelDbWriter;
 import fr.profi.mzknife.mgf.MGFECleaner;
 import fr.profi.mzknife.mgf.MGFThreadedWriter;
 import fr.profi.mzknife.mgf.PCleanProcessor;
@@ -19,6 +25,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Enumeration;
+import scala.Option;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -47,11 +54,13 @@ public class MzDbProcessing extends AbstractProcessing {
     CommandArguments.MzDBSplitterCommand mzDBSplitterCommand = new CommandArguments.MzDBSplitterCommand();
     CommandArguments.MzDBCreateMgfCommand mzDBCreateMgfCommand  = new CommandArguments.MzDBCreateMgfCommand();
     CommandArguments.MzDBMetricsCommand mzDBMetricsCommand = new CommandArguments.MzDBMetricsCommand();
+    CommandArguments.MzDBPeakelsDetectorCommand mzDBPeakelsDetectorCommand = new CommandArguments.MzDBPeakelsDetectorCommand();
 
     addCommand(mzDBRecalibrateCommand);
     addCommand(mzDBSplitterCommand);
     addCommand(mzDBCreateMgfCommand);
     addCommand(mzDBMetricsCommand);
+    addCommand(mzDBPeakelsDetectorCommand);
 
     try {
 
@@ -86,6 +95,13 @@ public class MzDbProcessing extends AbstractProcessing {
               computeMzdbMetrics(mzDBMetricsCommand);
               break;
 
+            case CommandArguments.DETECT_PEAKELS_COMMAND_NAME:
+              if (mzDBPeakelsDetectorCommand.help)
+                usage();
+
+              detectPeakels(mzDBPeakelsDetectorCommand);
+              break;
+
             default:
               LOG.warn("Invalid command specified ");
               usage();
@@ -97,6 +113,41 @@ public class MzDbProcessing extends AbstractProcessing {
       } catch(Exception e){
         LOG.error("ERROR ", e);
       }
+  }
+
+  private static void detectPeakels(CommandArguments.MzDBPeakelsDetectorCommand mzDBPeakelsDetectorCommand) {
+
+    File mzdbSrcFile = new File(mzDBPeakelsDetectorCommand.mzdbFile);
+    File peakelsFile = getDestFile(mzDBPeakelsDetectorCommand.outputFile, ".peakelDb", mzdbSrcFile);
+
+    try {
+      MzDbReader mzDbReader = new MzDbReader(mzdbSrcFile, true);
+      MzDbFeatureDetector detector = new MzDbFeatureDetector(mzDbReader, new FeatureDetectorConfig(
+              1,
+              mzDBPeakelsDetectorCommand.mzTolPPM,
+              5,
+              mzDBPeakelsDetectorCommand.intensityPercentile,
+              mzDBPeakelsDetectorCommand.maxConsecutiveGaps,
+              new SmartPeakelFinderConfig(
+                      mzDBPeakelsDetectorCommand.minPeaksCount,
+                      mzDBPeakelsDetectorCommand.miniMaxiDistanceThresh,
+                      mzDBPeakelsDetectorCommand.maxIntensityRelThresh,
+                      false,
+                      10,
+                      false,
+                      mzDBPeakelsDetectorCommand.useBaselineRemover,
+                      mzDBPeakelsDetectorCommand.useSmoothing
+              )
+      ));
+
+      Peakel[] peakels = detector.detectPeakels(mzDbReader.getLcMsRunSliceIterator(), Option.empty());
+
+      peakelsFile.createNewFile();
+      final SQLiteConnection peakelFileConnection = PeakelDbWriter.initPeakelStore(peakelsFile);
+      PeakelDbWriter.storePeakelsInPeakelDB(peakelFileConnection, peakels, mzDbReader.getMs1SpectrumHeaders());
+    } catch (Exception e) {
+      LOG.error("Error while writing peakels", e);
+    }
   }
 
   public static void recalibrateMzdb(CommandArguments.MzDBRecalibrateCommand mzDBRecalibrateCommand) throws FileNotFoundException, SQLiteException {
