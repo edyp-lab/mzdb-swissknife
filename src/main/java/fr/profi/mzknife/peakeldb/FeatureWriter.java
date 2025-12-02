@@ -8,7 +8,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,27 +19,25 @@ public class FeatureWriter {
   private final static Logger LOG = LoggerFactory.getLogger(FeatureWriter.class);
 
   public static final String[] FT_COLUMNS = new String[]{"ion.id", "ion.mz", "ion.charge", "ion.rt", "ft.intensity", "ft.area", "ft.elution_time", "ft.mz", "peakels.count", "peakel.ids", "ft.base_peakel_idx", "ft.isReliable", "cluster.peakels.ids", "ft.faims.cv", "ft.rawfile"};
-  private static final CharSequence DELIMITER = ";";
-  private static final DecimalFormat DF = new DecimalFormat("#");
-
 
   public static void writeFeatures(File outputFile,
                                    List<PutativeFeatureWrapper> putativeFeatures,
+                                   CharSequence delimiter,
                                    Map<Integer, String> originalLines,
                                    String originalHeader,
                                    boolean outputUnassigned) throws IOException {
 
     BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
 
-    writer.write(Arrays.stream(FT_COLUMNS).collect(Collectors.joining(DELIMITER)));
-    writer.write(DELIMITER+originalHeader);
+    writer.write(String.join(delimiter, FT_COLUMNS));
+    writer.write(delimiter+originalHeader);
     writer.newLine();
 
     for (PutativeFeatureWrapper putativeFt : putativeFeatures) {
       StringBuilder strBuilder = new StringBuilder();
 
       if (putativeFt.isMatched() || outputUnassigned) {
-        writeMatchedFeature(putativeFt, strBuilder);
+        writeMatchedFeature(putativeFt, strBuilder, delimiter);
         final String s = originalLines.get(putativeFt.id());
         if (s != null) {
           strBuilder.append(s);
@@ -57,45 +54,46 @@ public class FeatureWriter {
     writer.close();
   }
 
-  private static void writeMatchedFeature(PutativeFeatureWrapper putativeFt, StringBuilder strBuilder) {
+  private static void writeMatchedFeature(PutativeFeatureWrapper putativeFt, StringBuilder strBuilder, CharSequence delimiter) {
 
 
-    strBuilder.append(putativeFt.id()).append(DELIMITER);
-    strBuilder.append(putativeFt.getMz()).append(DELIMITER);
-    strBuilder.append(putativeFt.charge()).append(DELIMITER);
-    strBuilder.append(putativeFt.elutionTime()).append(DELIMITER);
+    final String listSeparator = delimiter.equals(",") ? "; " : ", ";
+
+    strBuilder.append(putativeFt.id()).append(delimiter);
+    strBuilder.append(putativeFt.getMz()).append(delimiter);
+    strBuilder.append(putativeFt.charge()).append(delimiter);
+    strBuilder.append(putativeFt.elutionTime()).append(delimiter);
 
     if (putativeFt.isMatched()) {
       Feature feature = putativeFt.getRepresentativeExperimentalFeature();
-      strBuilder.append(feature.getBasePeakel().getApexIntensity()).append(DELIMITER);
-      strBuilder.append(feature.getBasePeakel().getArea()).append(DELIMITER);
-      strBuilder.append(feature.getElutionTime()).append(DELIMITER);
-      strBuilder.append(feature.getMz()).append(DELIMITER);
-      strBuilder.append(feature.getPeakels().length).append(DELIMITER);
+      strBuilder.append(feature.getBasePeakel().getApexIntensity()).append(delimiter);
+      strBuilder.append(feature.getBasePeakel().getArea()).append(delimiter);
+      strBuilder.append(feature.getElutionTime()).append(delimiter);
+      strBuilder.append(feature.getMz()).append(delimiter);
+      strBuilder.append(feature.getPeakels().length).append(delimiter);
       // isotopes peakel ids of all matching experimental peakels
-      strBuilder.append(Arrays.stream(feature.getPeakels()).map(p -> Integer.toString(p.getId())).collect(Collectors.joining(", ", "{", "}"))).append(DELIMITER);
-      strBuilder.append(feature.getBasePeakelIndex()).append(DELIMITER);
-      strBuilder.append(putativeFt.isReliable().isPresent() ? putativeFt.isReliable().get(): "").append(DELIMITER);
+      strBuilder.append(Arrays.stream(feature.getPeakels()).map(p -> Integer.toString(p.getId())).collect(Collectors.joining(listSeparator, "{", "}"))).append(delimiter);
+      strBuilder.append(feature.getBasePeakelIndex()).append(delimiter);
+      strBuilder.append(putativeFt.isReliable().isPresent() ? putativeFt.isReliable().get(): "").append(delimiter);
       // isotopes peakel ids of all matching experimental peakels of all grouped features
       if (putativeFt.getGroupedFeatures() != null) {
-        strBuilder.append(putativeFt.getGroupedPeakelIds().stream().map(i -> Integer.toString(i)).collect(Collectors.joining(", ", "{", "}"))).append(DELIMITER);
+        strBuilder.append(putativeFt.getGroupedPeakelIds().stream().map(i -> Integer.toString(i)).collect(Collectors.joining(listSeparator, "{", "}"))).append(delimiter);
       } else {
-        strBuilder.append("").append(DELIMITER);
+        strBuilder.append(delimiter);
       }
 
     } else {
       // no experimental feature found, output empty columns except for columns [ID, MZ, CHARGE, RT, CV, RAW]
-      for(int i = 6; i < FT_COLUMNS.length; i++) {
-        strBuilder.append("").append(DELIMITER);
-      }
+      strBuilder.append(String.valueOf(delimiter).repeat(FT_COLUMNS.length - 6));
     }
 
-    strBuilder.append(putativeFt.getCvValue() != null ? Float.valueOf(putativeFt.getCvValue()).intValue() : "").append(DELIMITER);
-    strBuilder.append(putativeFt.getRawSourceFile() != null ? putativeFt.getRawSourceFile() : "").append(DELIMITER);
+    strBuilder.append(putativeFt.getCvValue() != null ? Float.valueOf(putativeFt.getCvValue()).intValue() : "").append(delimiter);
+    strBuilder.append(putativeFt.getRawSourceFile() != null ? putativeFt.getRawSourceFile() : "").append(delimiter);
   }
 
   public static void writeIons(File outputFile,
                                List<ConsensusIon> consensusIons,
+                               CharSequence delimiter,
                                Map<Integer, String> originalLines,
                                String originalHeader,
                                boolean outputUnassigned,
@@ -104,8 +102,8 @@ public class FeatureWriter {
     BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
     String[] columns = buildColumns(allRuns);
 
-    writer.write(Arrays.stream(columns).collect(Collectors.joining(DELIMITER)));
-    writer.write(DELIMITER + originalHeader);
+    writer.write(String.join(delimiter, columns));
+    writer.write(delimiter + originalHeader);
     writer.newLine();
 
     for (ConsensusIon consensusIon : consensusIons) {
@@ -118,16 +116,14 @@ public class FeatureWriter {
             // TODO : select the "best feature" instead of the first one
             final PutativeFeatureWrapper putativeFt = putativeFeatures.get(0);
             if (putativeFt.isMatched() || outputUnassigned) {
-              writeMatchedFeature(putativeFt, strBuilder);
+              writeMatchedFeature(putativeFt, strBuilder, delimiter);
             }
           } else {
             LOG.error("!!!! More than one Putative Ft found for run {}", run);
           }
         } else {
-          strBuilder.append(consensusIon.getRepresentativeFeature().id()).append(DELIMITER);
-          for (int i = 1; i < FT_COLUMNS.length; i++) {
-            strBuilder.append("").append(DELIMITER);
-          }
+          strBuilder.append(consensusIon.getRepresentativeFeature().id()).append(delimiter);
+          strBuilder.append(String.valueOf(delimiter).repeat(FT_COLUMNS.length - 1));
         }
       }
 

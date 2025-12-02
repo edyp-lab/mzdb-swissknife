@@ -418,7 +418,7 @@ public class CommandArguments {
     @Parameter(names = {"-ftdb","--featuredb_file"}, description = "featuredb containing already matched features and peakels", required = false, order = 2)
     public String featureDbFile;
 
-    @Parameter(names = {"-cf", "--columns"}, description = "Columns configuration file", required = true)
+    @Parameter(names = {"-cf", "--csv_config"}, description = "CSV format (columns and separator) configuration file", required = true)
     public String columnsConfig;
 
     @Parameter(names = {"-o","--output"}, description = "matching peakels output file name", required = false, order = 1)
@@ -486,11 +486,14 @@ public class CommandArguments {
     @Parameter(names = {"-rttol", "--rt_tol"}, description = "RT tolerance (in secondes)).", required = false)
     public Integer rtTolerance = 300;
 
-    @Parameter(names = {"-g"}, description="Group the Psms of a run into ions ", required = false)
+    @Parameter(names = {"-g"}, description="Group the Psms of a run into ions.", required = false)
     public boolean groupPsms = false;
 
     @Parameter(names = {"-xa"}, description="cross assign ions", required = false)
     public boolean crossAssign = false;
+
+    @Parameter(names = {"-gr"}, description="Group ion's features from different runs into a single row in the output file", required = false)
+    public boolean groupIonsRows = true;
 
     @Parameter(names = {"-wmp"}, description="write matched PSMs", required = false)
     public boolean writeMatchedPsms = false;

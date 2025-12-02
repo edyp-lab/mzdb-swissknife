@@ -64,6 +64,18 @@ public class PeakelsDbFinder {
     }
   }
 
+  /**
+   * Matches a list of identified PSMs (Peptide-Spectrum Matches) to experimental features
+   * by screening peakels from a database. It identifies corresponding features for each PSM
+   * within a specified m/z tolerance and optionally groups PSMs by their ion keys.
+   *
+   * @param psms the list of putative feature wrappers representing the PSMs to be matched
+   * @param reader the MzDbReader used to access spectrum data for matching
+   * @param mzTolPPM the mass-to-charge ratio tolerance in parts per million for matching PSMs to peakels
+   * @param groupPSMs whether to group the PSMs by their ion keys after matching
+   * @return a list of putative feature wrappers, optionally grouped, with added experimental features matching the PSMs
+   * @throws Exception if an error occurs during matching or interacting with the database
+   */
   public List<PutativeFeatureWrapper> matchIdentifiedPsms(List<PutativeFeatureWrapper> psms, MzDbReader reader, Float mzTolPPM, Boolean groupPSMs) throws Exception {
 
     Metric metrics = new Metric("PeakelsDbFinder");
@@ -83,7 +95,7 @@ public class PeakelsDbFinder {
     LOG.info("Searching for {} identified PSMs", psms.size());
     long start = System.currentTimeMillis();
 
-    Set<PutativeFeatureWrapper> matchedPsms2 = new HashSet<>();
+    Set<PutativeFeatureWrapper> matchedPsms = new HashSet<>();
 
     Iterator<Peakel> peakelsIt = asJavaIterable(PeakelDbReader.loadAllPeakels(connection, 800000)).iterator();
     int peakelsCount = 0;
@@ -104,7 +116,7 @@ public class PeakelsDbFinder {
             final Feature feature = buildFeature(peakel, psm, mzTolPPM);
             psm.addExperimentalFeature(feature);
 //            matchedPsms.add(psm.id());
-            matchedPsms2.add(psm);
+            matchedPsms.add(psm);
             metrics.incr("matching_peakels_found");
           }
         }
@@ -113,13 +125,11 @@ public class PeakelsDbFinder {
       if ((peakelsCount % 50000) == 0) LOG.info("scanned peakels : {}", peakelsCount);
     }
 
-    LOG.info("Total Duration : {} ms to match {} psms (over {}) to {} peakels", (System.currentTimeMillis() - start), matchedPsms2.size(), psms.size(), peakelsCount);
+    LOG.info("Total Duration : {} ms to screen {} peakels", (System.currentTimeMillis() - start),  peakelsCount);
 
-    LOG.info("Total number of ions {}", psms.stream().map(p -> p.getIonKey()).distinct().count());
-    LOG.info("Total number of peptides {}", psms.stream().map(p -> p.getPeptideKey()).distinct().count());
-
-    LOG.info("Total number of matched ions {}", matchedPsms2.stream().map(p -> p.getIonKey()).distinct().count());
-    LOG.info("Total number of matched peptides {}", matchedPsms2.stream().map(p -> p.getPeptideKey()).distinct().count());
+    LOG.info("Total number of matched psms {} / {} submitted",matchedPsms.size(), psms.size());
+    LOG.info("Total number of matched ions {} / {} submitted",matchedPsms.stream().map(p -> p.getIonKey()).distinct().count(), psms.stream().map(p -> p.getIonKey()).distinct().count());
+    LOG.info("Total number of matched peptides {} / {} submitted", matchedPsms.stream().map(p -> p.getPeptideKey()).distinct().count(), psms.stream().map(p -> p.getPeptideKey()).distinct().count());
 
     if (groupPSMs) {
       return FeaturesHelper.groupByIonKeys(psms);
@@ -130,6 +140,16 @@ public class PeakelsDbFinder {
 
 
 
+  /**
+   * Matches putative features with experimental peakels from a database within a specified m/z tolerance.
+   * This method attempts to find corresponding experimental features for each input putative feature.
+   *
+   * @param putativeFts the list of putative feature wrappers to be matched with experimental features
+   * @param assignedPeakelsFile a file containing the list of peakel IDs that are assigned and excluded from matching
+   * @param mzTolPPM the mass-to-charge (m/z) tolerance in parts per million for matching putative features to peakels
+   * @return a list of putative feature wrappers with associated experimental features if matches are found
+   * @throws IOException if an error occurs while reading the assigned peakels file
+   */
   public List<PutativeFeatureWrapper> matchPutativeFeatures(List<PutativeFeatureWrapper> putativeFts, File assignedPeakelsFile, Float mzTolPPM) throws IOException {
 
     //

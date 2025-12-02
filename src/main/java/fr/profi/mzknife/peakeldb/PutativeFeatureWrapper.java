@@ -86,6 +86,12 @@ public class PutativeFeatureWrapper extends PutativeFeature {
     updateKeys(false);
   }
 
+  /**
+   * Updates the `peptideKey` and `ionKey` fields of this instance based on the current sequence and modification (for
+   * `peptideKey`) and sequence, modification, charge, and optionally the `cvValue` field for `ionKey`.
+   *
+   * @param useCvValue a boolean flag that determines whether the `cvValue` field should be included in the `ionKey`.
+   */
   public void updateKeys(boolean useCvValue) {
     StringBuilder stb = new StringBuilder(this.sequence);
     if (this.modification != null) {

@@ -31,14 +31,14 @@ public class PeakelsProcessing extends AbstractProcessing {
 
   private final static Logger LOG = LoggerFactory.getLogger(PeakelsProcessing.class);
 
-  private enum Column {ID, MOZ, CHARGE, RT, SEQ, PTMS, SCAN_NUMBER, TTOL, CV, RAWFILE}
+  public enum Column {ID, MOZ, CHARGE, RT, SEQ, PTMS, SCAN_NUMBER, TTOL, CV, RAWFILE}
 
-  public static class ColumnT {
-    private Column column;
+  public static class ColumnMapping {
+    private final Column column;
     private int index;
     private List<Integer> indexes = null;
 
-    public ColumnT(Column c) {
+    public ColumnMapping(Column c) {
       column = c;
       index = c.ordinal();
     }
@@ -50,9 +50,9 @@ public class PeakelsProcessing extends AbstractProcessing {
   }
 
   public static class InputSource {
-    private List<PutativeFeatureWrapper> putativeFeatures;
-    private String originalHeader;
-    private Map<Integer, String> originalLines;
+    private final List<PutativeFeatureWrapper> putativeFeatures;
+    private final String originalHeader;
+    private final Map<Integer, String> originalLines;
 
     public InputSource(List<PutativeFeatureWrapper> putativeFeatures, String originalHeader, Map<Integer, String> originalLines) {
       this.putativeFeatures = putativeFeatures;
@@ -72,6 +72,54 @@ public class PeakelsProcessing extends AbstractProcessing {
       return originalLines;
     }
   }
+
+
+
+  public static class ReaderConfiguration {
+
+    private static final CharSequence DEFAULT_SEPARATOR = ";";
+
+    private final Map<Column, ColumnMapping> columns;
+    private final CharSequence separator;
+
+    private ReaderConfiguration(Properties properties) {
+      this.columns = initializeColumns(properties);
+      this.separator = extractSeparator(properties);
+    }
+
+    /**
+     * Factory method creating configuration from a path to the .columns file.
+     */
+    public static ReaderConfiguration fromFile(String configurationFilePath) {
+      Properties properties = loadColumnProperties(configurationFilePath);
+      return new ReaderConfiguration(properties);
+    }
+
+    private static CharSequence extractSeparator(Properties properties) {
+      String value = properties.getProperty("SEPARATOR");
+      if (value == null || value.isEmpty()) {
+        return DEFAULT_SEPARATOR;
+      }
+      return value;
+    }
+
+    private static Properties loadColumnProperties(String configurationFilePath) {
+      Properties properties = new Properties();
+
+      if (configurationFilePath == null || configurationFilePath.isEmpty()) {
+        return properties;
+      }
+
+      try (FileInputStream fis = new FileInputStream(configurationFilePath)) {
+        properties.load(fis);
+      } catch (IOException ioe) {
+        LOG.error("Column properties cannot be read from {}", configurationFilePath, ioe);
+      }
+
+      return properties;
+    }
+  }
+
 
   /**
    * Search for putative ions in a peakeldb file.
@@ -128,22 +176,27 @@ public class PeakelsProcessing extends AbstractProcessing {
 
   private static void quantifyPsms(CommandArguments.QuantifyPsmsCommand command) throws Exception {
 
-    Map<Column, ColumnT> columns = initializeColumns(command.columnsConfig);
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(command.columnsConfig);
 
-    if (!columns.get(Column.RAWFILE).isPresent()) {
+    if (!configuration.columns.get(Column.RAWFILE).isPresent()) {
       LOG.error("To match PSMs to mzdb files the RAW_FILE column must be provided in the configuration file");
+      return;
+    }
+
+    if(configuration.separator.equals(',')) {
+      LOG.error("The ',' column separator is not supported. Please use an alternative separator to avoid conflicts ('\t' or ';' for example).");
       return;
     }
 
     final File psmsFile = new File(command.psmsFile);
     final File outputPSMsFile = getDestFile(command.outputFile, "_matched_psms.csv", psmsFile);
     final File outputMissingIonsFile = getDestFile(command.outputFile, "_matched_ions.csv", psmsFile);
-    final InputSource source = readPutativeFeatures(psmsFile, columns);
+    final InputSource source = readPutativeFeatures(psmsFile, configuration);
 
     // force ion key update using the CV value if present
     source.getPutativeFeatures().forEach(pf -> pf.updateKeys(true));
 
-    final Map<String, List<PutativeFeatureWrapper>> putativeFtsByRun = source.getPutativeFeatures().stream().collect(Collectors.groupingBy(pf -> pf.getRawSourceFile()));
+    final Map<String, List<PutativeFeatureWrapper>> putativeFtsByRun = source.getPutativeFeatures().stream().collect(Collectors.groupingBy(PutativeFeatureWrapper::getRawSourceFile));
 
     Map<String, File> mzdbFilesByRawFileName = new HashMap<>();
 
@@ -173,7 +226,7 @@ public class PeakelsProcessing extends AbstractProcessing {
     }
 
     if (command.writeMatchedPsms || (!command.crossAssign && !command.groupPsms)) {
-      FeatureWriter.writeFeatures(outputPSMsFile, psms, source.getOriginalLines(), source.getOriginalHeader(), true);
+      FeatureWriter.writeFeatures(outputPSMsFile, psms, configuration.separator, source.getOriginalLines(), source.getOriginalHeader(), true);
     }
 
     if (command.groupPsms || command.crossAssign) {
@@ -255,31 +308,31 @@ public class PeakelsProcessing extends AbstractProcessing {
           }
         }
       }
-      if (command.groupPsms) {
+      if (command.groupIonsRows) {
         LOG.info("Writing {} ions in {}", consensusIons.size(), outputMissingIonsFile.getAbsolutePath());
-        FeatureWriter.writeIons(outputMissingIonsFile, consensusIons, source.getOriginalLines(), source.getOriginalHeader(), true, allRuns);
+        FeatureWriter.writeIons(outputMissingIonsFile, consensusIons, configuration.separator, source.getOriginalLines(), source.getOriginalHeader(), true, allRuns);
       } else {
         final List<PutativeFeatureWrapper> allPsms = consensusIons.stream().map(ConsensusIon::getAllPutativeFeatures).flatMap(Collection::stream).toList();
-        FeatureWriter.writeFeatures(outputMissingIonsFile, allPsms, source.getOriginalLines(), source.getOriginalHeader(), true);
+        FeatureWriter.writeFeatures(outputMissingIonsFile, allPsms, configuration.separator, source.getOriginalLines(), source.getOriginalHeader(), true);
       }
     }
   }
 
   private static void matchPsms(CommandArguments.PsmsMatchingCommand command) throws Exception {
 
-    Map<Column, ColumnT> columns = initializeColumns(command.columnsConfig);
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(command.columnsConfig);
 
     // check configuration consistency : if grouping is requested, SEQ and PTMS columns must have been supplied
-    if (command.groupPsms && !(columns.get(Column.SEQ).isPresent() && columns.get(Column.PTMS).isPresent())) {
+    if (command.groupPsms && !(configuration.columns.get(Column.SEQ).isPresent() && configuration.columns.get(Column.PTMS).isPresent())) {
       LOG.error("To group PSMs the sequence and modifications columns must be provided");
       return;
     }
 
     final File psmsFile = new File(command.psmsFile);
     File outputFile = getDestFile(command.outputFile, "_matched.tsv", psmsFile);
-    final InputSource source = readPutativeFeatures(psmsFile, columns);
+    final InputSource source = readPutativeFeatures(psmsFile, configuration);
     final List<PutativeFeatureWrapper> psms = _matchPsms(command, source);
-    FeatureWriter.writeFeatures(outputFile, psms, source.getOriginalLines(), source.getOriginalHeader(), command.outputUnassignedPsms);
+    FeatureWriter.writeFeatures(outputFile, psms, configuration.separator, source.getOriginalLines(), source.getOriginalHeader(), command.outputUnassignedPsms);
   }
 
   private static List<PutativeFeatureWrapper> _matchPsms(CommandArguments.PsmsMatchingCommand command, InputSource source) throws Exception {
@@ -327,7 +380,7 @@ public class PeakelsProcessing extends AbstractProcessing {
 
   public static void matchIons(CommandArguments.IonsMatchingCommand command) throws Exception {
 
-    Map<Column, ColumnT> columns = initializeColumns(command.columnsConfig);
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(command.columnsConfig);
 
     File featuredb = null;
     if (command.featureDbFile != null && !command.featureDbFile.isEmpty()) {
@@ -336,39 +389,42 @@ public class PeakelsProcessing extends AbstractProcessing {
 
     final File ionsFile = new File(command.putativeIonsFile);
     File outputFile = getDestFile(command.outputFile, ".tsv", ionsFile);
-    final InputSource source = readPutativeFeatures(ionsFile, columns);
+    final InputSource source = readPutativeFeatures(ionsFile, configuration);
     File peakeldb = new File(command.peakelDbFile);
     PeakelsDbFinder finder = new PeakelsDbFinder(peakeldb);
     final List<PutativeFeatureWrapper> ions = finder.matchPutativeFeatures(source.getPutativeFeatures(), featuredb, command.mzTolPPM);
 
-    FeatureWriter.writeFeatures(outputFile, ions, source.getOriginalLines(), source.getOriginalHeader(), command.outputUnassignedIons);
+    FeatureWriter.writeFeatures(outputFile, ions, configuration.separator, source.getOriginalLines(), source.getOriginalHeader(), command.outputUnassignedIons);
   }
 
 
-  private static InputSource readPutativeFeatures(File file, Map<Column, ColumnT> columns) throws IOException, CsvValidationException {
+  public static InputSource readPutativeFeatures(File file, ReaderConfiguration configuration) throws IOException, CsvValidationException {
+
+    Map<Column, ColumnMapping> columns = configuration.columns;
+
     List<PutativeFeatureWrapper> putativeFeatures = new ArrayList<>();
     Map<Integer, String> initialInput = new HashMap<>();
 
-    final CSVParser parser = new CSVParserBuilder().withSeparator(';').build();
+    final CSVParser parser = new CSVParserBuilder().withSeparator(configuration.separator.charAt(0)).build();
     CSVReader reader = new CSVReaderBuilder(new FileReader(file)).withCSVParser(parser).build();
     int lineCount = 0;
-    String header = String.join(";", reader.readNext());
+    String header = String.join(String.valueOf(configuration.separator), reader.readNext());
     String[] split;
     while ((split = reader.readNext()) != null) {
 
       try {
-        final Integer id = columns.get(Column.ID).isPresent() ? Integer.valueOf(split[columns.get(Column.ID).index]) : lineCount;
+        final Integer id = columns.get(Column.ID).isPresent() ? Integer.parseInt(split[columns.get(Column.ID).index]) : lineCount;
 
-        final double moz = Double.valueOf(split[columns.get(Column.MOZ).index]);
-        final int charge = Integer.valueOf(split[columns.get(Column.CHARGE).index]);
+        final double moz = Double.parseDouble(split[columns.get(Column.MOZ).index]);
+        final int charge = Integer.parseInt(split[columns.get(Column.CHARGE).index]);
         final PutativeFeatureWrapper putativeFeature = new PutativeFeatureWrapper(id, moz, charge);
 
         if (columns.get(Column.RT).isPresent()) {
-          final float elutionTime = Float.valueOf(split[columns.get(Column.RT).index]);
+          final float elutionTime = Float.parseFloat(split[columns.get(Column.RT).index]);
           putativeFeature.setElutionTime(elutionTime * 60.0f);
         }
         if (columns.get(Column.SCAN_NUMBER).isPresent()) {
-          final long scanNumber = Long.valueOf(split[columns.get(Column.SCAN_NUMBER).index]);
+          final long scanNumber = Long.parseLong(split[columns.get(Column.SCAN_NUMBER).index]);
           putativeFeature.setSpectrumId(scanNumber);
         }
 
@@ -380,7 +436,7 @@ public class PeakelsProcessing extends AbstractProcessing {
             for (Integer ptmIndex : columns.get(Column.PTMS).indexes) {
               modifications.add(split[ptmIndex]);
             }
-            modificationAsStr = modifications.stream().collect(Collectors.joining("."));
+            modificationAsStr = String.join(".", modifications);
           } else {
             modificationAsStr = split[columns.get(Column.PTMS).index];
           }
@@ -388,7 +444,7 @@ public class PeakelsProcessing extends AbstractProcessing {
         }
 
         if (columns.containsKey(Column.TTOL) && columns.get(Column.TTOL).isPresent())
-          putativeFeature.setElutionTimeTolerance(Float.valueOf(split[columns.get(Column.TTOL).index]));
+          putativeFeature.setElutionTimeTolerance(Float.parseFloat(split[columns.get(Column.TTOL).index]));
 
         if (columns.containsKey(Column.CV) && columns.get(Column.CV).isPresent())
           putativeFeature.setCvValue(split[columns.get(Column.CV).index]);
@@ -401,10 +457,10 @@ public class PeakelsProcessing extends AbstractProcessing {
         // protect original content with quotes
         StringBuilder strBuilder = new StringBuilder();
         Arrays.stream(split).forEach(s -> {
-          if (s.contains(";")) {
-            strBuilder.append('"').append(s).append('"').append(";");
+          if (s.contains(String.valueOf(configuration.separator))) {
+            strBuilder.append('"').append(s).append('"').append(configuration.separator);
           } else {
-            strBuilder.append(s).append(";");
+            strBuilder.append(s).append(configuration.separator);
           }
         });
         strBuilder.setLength(Math.max(strBuilder.length() - 1, 0));
@@ -427,33 +483,29 @@ public class PeakelsProcessing extends AbstractProcessing {
     return source;
   }
 
-  private static Map<Column, ColumnT> initializeColumns(String configurationFilePath) {
+  public static Map<Column, ColumnMapping> initializeColumns(Properties properties) {
 
-    Map<Column, ColumnT> columns = new HashMap<>() {{
-      put(Column.ID, new ColumnT(Column.ID));
-      put(Column.MOZ, new ColumnT(Column.MOZ));
-      put(Column.CHARGE, new ColumnT(Column.CHARGE));
-      put(Column.RT, new ColumnT(Column.RT));
-      put(Column.SCAN_NUMBER, new ColumnT(Column.SCAN_NUMBER));
-      put(Column.SEQ, new ColumnT(Column.SEQ));
-      put(Column.PTMS, new ColumnT(Column.PTMS));
-      put(Column.CV, new ColumnT(Column.CV));
-      put(Column.RAWFILE, new ColumnT(Column.RAWFILE));
-      put(Column.TTOL, new ColumnT(Column.TTOL));
+    Map<Column, ColumnMapping> columns = new HashMap<>() {{
+      put(Column.ID, new ColumnMapping(Column.ID));
+      put(Column.MOZ, new ColumnMapping(Column.MOZ));
+      put(Column.CHARGE, new ColumnMapping(Column.CHARGE));
+      put(Column.RT, new ColumnMapping(Column.RT));
+      put(Column.SCAN_NUMBER, new ColumnMapping(Column.SCAN_NUMBER));
+      put(Column.SEQ, new ColumnMapping(Column.SEQ));
+      put(Column.PTMS, new ColumnMapping(Column.PTMS));
+      put(Column.CV, new ColumnMapping(Column.CV));
+      put(Column.RAWFILE, new ColumnMapping(Column.RAWFILE));
+      put(Column.TTOL, new ColumnMapping(Column.TTOL));
     }};
 
     // initialize columns indexes by reading the configuration file (if supplied)
-    if ((configurationFilePath != null) && !configurationFilePath.isEmpty()) {
-      try {
-        FileInputStream fis = new FileInputStream(configurationFilePath);
-        Properties properties = new Properties();
-        properties.load(fis);
+
         for (Column c : columns.keySet()) {
           if (properties.containsKey(c.name())) {
             String value = properties.getProperty(c.name());
             if ((value != null) && !value.isEmpty()) {
                 final String[] split = value.split("\\+");
-                columns.get(c).index = Integer.valueOf(split[0].trim());
+                columns.get(c).index = Integer.parseInt(split[0].trim());
                 if (split.length > 1) {
                   final List<Integer> list = List.of(split).stream().map( s -> Integer.valueOf(s.trim())).toList();
                   columns.get(c).indexes = list;
@@ -465,12 +517,9 @@ public class PeakelsProcessing extends AbstractProcessing {
             columns.get(c).index = -1;
           }
         }
-      } catch (IOException ioe) {
-        LOG.error("Column properties cannot be read from {}", configurationFilePath);
-      }
-    }
     return columns;
   }
+
 
   private static Map<String, File> generatePeakelDb(MzDbReader mzDbReader, File mzdbFile, Float mzTol) throws SQLiteException {
 
