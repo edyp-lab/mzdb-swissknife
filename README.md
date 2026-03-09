@@ -56,13 +56,47 @@ run.bat maxquant create_mgf -i1 Xpl1_002790.HCD.FTMS.sil0.apl -i2 Xpl1_002790.HC
 
 ### Peakels command examples
 
-To search for putative features in a peakelDb file, type:
+To match identified psms to elution peaks (peakels) from a mzdb file and/or peakelDb file, type:
 
 ```
-run.bat peakels find_peakels -p QEKAC160601_18.raw-4873932527404489086.sqlite -i putativeIons.csv -mztol 5.0 -o matchedFeatures.tsv
+run.bat peakels match_psms -mzdb QEKAC160601_18.mzdb -pkdb QEKAC160601_18.raw-4873932527404489086.sqlite -psms identifiedPsms.csv -cf psms.columns -mztol 5.0 -o matchedPSMS.tsv
+```
+
+The `identifiedPsms.csv` file must contain the PSMS that will be matched to the peakels. This file must contain columns corresponding to the m/z, charge state, and retention time (in minutes) of each 
+PSMs. optional columns corresponding to the sequence and list of modifications can be supplied. An ID can also be supplied, if not an ID is automatically generated. The column separator is the semi colon (;).
+
+The `psms.columns` file is used to specify the rank (or column number, starting from 0 for the first column) of each expected column (ID, SEQ, PTMS, MOZ, CHARGE, RT). The column number is specified 
+as `COLUMN = <number>`.
+
+The `-g` option can be used to group PSMs into ions in the output. If so, the SEQ and PTMS columns are required to generate the key (modified sequenceà) that will be used to group PSMs. 
+
+
+To search for putative features (ie predicted features or missing features) in a peakelDb file, type:
+
+```
+run.bat peakels match_ions -pkdb QEKAC160601_18.raw-4873932527404489086.sqlite -ions putativeIons.csv -mztol 5.0 -o matchedFeatures.tsv
 ```
 
 The `putativeIons.csv` file must contain the following columns (in this order) : {Id ; mz; charge; rt; rt_tolerance}. Any additional 
 column will be ignored. The name of the columns doesn't matter. the column separator is the semi colon (;).  
 
+To quantify identified psms to elution peaks (peakels) across multiple raw files, use the quantify_psms command:
 
+```
+run.bat peakels quantify_psms -d .\MSData -cf csms.columns -i identifiedPsms.csv -mztol 10.0
+```
+
+The column configuration file (see above) must contain an additional RAWFILE column containing the name of the rawfile in which the PSM was identified.  
+
+The `-d` option is used to specify the directory in which the mzdb files must be searched.  
+
+This command could also be used to perform an optional cross assignment step:
+
+```
+run.bat peakels quantify_psms -d .\MSData -cf csms.columns -i identifiedPsms.csv -mztol 10.0 -rttol 60 -g -xa -wmp
+```
+
+`-rttol` indicates the retention time tolerance (in seconds) used to cross assign the missing features
+`-g` is used to group PSMs of a single rawfile corresponding to the same peptide ion. 
+`-xa` is used to perform the cross assignment step. If not specified, the output contains the predicted missing features, but those are not quantified / cross-assigned
+`-wmp` is used to write the PSMs matching result file, before computing consensus ions and cross assignment. 

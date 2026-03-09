@@ -1,8 +1,8 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.mgf.MGFConstants;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzdb.io.writer.mgf.MgfField;
-import fr.profi.mzscope.MGFConstants;
-import fr.profi.mzscope.MSMSSpectrum;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -13,7 +13,6 @@ public class MGFWriter {
 
   private static final DecimalFormat DEC4 = new DecimalFormat("#.####", new DecimalFormatSymbols(Locale.US));
   private static final DecimalFormat DEC5 = new DecimalFormat("#.#####", new DecimalFormatSymbols(Locale.US));
-
   private static final DecimalFormat NODEC = new  DecimalFormat("#", new DecimalFormatSymbols(Locale.US));
 
   public static String LINE_SPERATOR = System.getProperty("line.separator");
@@ -42,7 +41,7 @@ public class MGFWriter {
     double[] intensities = spectrum.getIntensityValues();
 
     for (int k = 0; k < masses.length; k++) {
-      stb.append(DEC5.format(masses[k])).append('\t').append(NODEC.format(intensities[k])).append(LINE_SPERATOR);
+      stb.append(DEC5.format(masses[k])).append('\t').append(Math.round(intensities[k])).append(LINE_SPERATOR);
     }
 
     stb.append(MgfField.END_IONS).append(LINE_SPERATOR);

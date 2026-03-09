@@ -1,0 +1,11 @@
+SEPARATOR = ;
+ID =
+MOZ = 5
+CHARGE = 7
+RT = 10
+SCAN_NUMBER =
+SEQ = 0
+PTMS = 2
+CV =
+RAWFILE =
+TTOL = 16

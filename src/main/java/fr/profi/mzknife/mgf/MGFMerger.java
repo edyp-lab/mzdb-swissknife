@@ -1,49 +1,47 @@
 package fr.profi.mzknife.mgf;
 
-import fr.profi.mzscope.InvalidMGFFormatException;
-import fr.profi.mzscope.MGFReader;
-import fr.profi.mzscope.MSMSSpectrum;
+import fr.profi.mgf.InvalidMGFFormatException;
+import fr.profi.mgf.MGFReader;
+import fr.profi.ms.model.MSMSSpectrum;
+import fr.profi.mzknife.util.MGFUtils;
 import fr.profi.util.metrics.Metric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class MGFMerger extends MGFRewriter {
 
   private final static Logger LOG = LoggerFactory.getLogger(MGFMerger.class);
 
-  private static final Pattern SCAN_PATTERN = Pattern.compile("scan\\W+([0-9]+)");
-
   private boolean m_filterSpectrum = true;
   private boolean m_replaceFragments = true;
 
-  private Metric metric = new Metric(MGFMerger.class.getName());
-  protected Map<Integer, List<MSMSSpectrum>> m_indexedFragmentSpectra = new HashMap<>();
+  private final Metric metric = new Metric(MGFMerger.class.getName());
+  protected Map<String, List<MSMSSpectrum>> m_indexedFragmentSpectra = new HashMap<>();
 
 
-  public MGFMerger(File srcPrecursorFile, File srcFragmentsFile, File m_dstFile) throws InvalidMGFFormatException {
+  public MGFMerger(File srcPrecursorFile, File srcFragmentsFile, File m_dstFile) throws InvalidMGFFormatException, IOException {
     super(srcPrecursorFile, m_dstFile);
 
     // index the entries of the second mgf by scan (scan numbers are extracted from the title)
 
-    MGFReader reader = new MGFReader();
-    List<MSMSSpectrum> fragmentSpectra = reader.read(srcFragmentsFile);
+    MGFReader reader = new MGFReader(srcFragmentsFile);
+    List<MSMSSpectrum> fragmentSpectra = reader.readAllSpectrum();
     for (MSMSSpectrum spectrum : fragmentSpectra) {
         metric.incr("fragments.file.scan_count");
-        Integer scan = getScan((String)spectrum.getAnnotation("TITLE"));
-        if (scan >= 0) {
-          List<MSMSSpectrum> list = m_indexedFragmentSpectra.getOrDefault(scan, new ArrayList<MSMSSpectrum>(2));
+        String scan = MGFUtils.getScanAsString(spectrum);
+        if ((scan != null) && !scan.trim().isEmpty()) {
+          List<MSMSSpectrum> list = m_indexedFragmentSpectra.getOrDefault(scan, new ArrayList<>(2));
           list.add(spectrum);
           m_indexedFragmentSpectra.put(scan, list);
         } else {
-          LOG.warn("No index or scan found in title : "+(String)spectrum.getAnnotation("TITLE"));
+          LOG.warn("No index or scan found in title : "+spectrum.getAnnotation("TITLE"));
           metric.incr("fragments.file.scan_not_found");
         }
     }
@@ -69,15 +67,15 @@ public class MGFMerger extends MGFRewriter {
   protected MSMSSpectrum getSpectrum2Export(MSMSSpectrum inSpectrum){
 
     metric.incr("precursors.file.scan_count");
-    Integer scan = getScan((String)inSpectrum.getAnnotation("TITLE"));
+    String scan = MGFUtils.getScanAsString(inSpectrum);
 
-    if (scan <= 0) {
+    if ((scan != null) && !scan.trim().isEmpty()) {
       metric.incr("precursors.file.scan_not_found");
     }
 
     if (m_indexedFragmentSpectra.containsKey(scan)) {
 
-      List<MSMSSpectrum> spectrumList = (List<MSMSSpectrum>) m_indexedFragmentSpectra.get(scan);
+      List<MSMSSpectrum> spectrumList = m_indexedFragmentSpectra.get(scan);
       MSMSSpectrum fragmentSpectrum = spectrumList.get(0);
 
       if (m_replaceFragments) {
@@ -107,17 +105,6 @@ public class MGFMerger extends MGFRewriter {
       return m_filterSpectrum ? null : inSpectrum;
     }
 
-  }
-
-  private static Integer getScan(String title) {
-    String searchedTitle = title.toLowerCase().replace("index", "scan");
-    Matcher m = SCAN_PATTERN.matcher(searchedTitle);
-    if (m.find()) {
-      String scanNumberStr = m.group(1);
-      return Integer.parseInt(scanNumberStr);
-    } else {
-      return -1;
-    }
   }
 
 }

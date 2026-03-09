@@ -3,7 +3,6 @@ package fr.profi.mzknife.mgf;
 import Preprocessing.Config;
 import Preprocessing.DeltaMassDB;
 import Preprocessing.JSpectrum;
-import fr.profi.mzscope.InvalidMGFFormatException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,7 +32,7 @@ public class MGFProcessingTest {
       pCleanProcessor.rewriteMGF();
       testFile(fDest);
 
-    } catch (IOException | InvalidMGFFormatException e) {
+    } catch (RuntimeException|IOException e) {
       Assert.fail("MzDB reader instantiation exception " + e.getMessage() + " for " + srcFilename);
     } finally {
       cleanupFile(fDest);
@@ -56,7 +55,7 @@ public class MGFProcessingTest {
       pCleanProcessor.rewriteMGF();
       testFile(fDest);
 
-    } catch (IOException | InvalidMGFFormatException e) {
+    } catch (IOException | RuntimeException e) {
       Assert.fail("MzDB reader instantiation exception " + e.getMessage() + " for " + srcFilename);
     } finally {
       cleanupFile(fDest);

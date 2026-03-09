@@ -1,13 +1,13 @@
 package fr.profi.mzknife.mgf;
 
+import fr.profi.mgf.MGFConstants;
+import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.mzknife.util.RecalibrateUtil;
-import fr.profi.mzscope.InvalidMGFFormatException;
-import fr.profi.mzscope.MGFConstants;
-import fr.profi.mzscope.MSMSSpectrum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 
 public class MGFRecalibrator extends MGFRewriter {
 
@@ -17,7 +17,7 @@ public class MGFRecalibrator extends MGFRewriter {
   private Double recalDeltaMass;
 
 
-  public MGFRecalibrator(File srcFile, File dstFile, Double firstTime, Double lastTime, Double deltaMass) throws InvalidMGFFormatException {
+  public MGFRecalibrator(File srcFile, File dstFile, Double firstTime, Double lastTime, Double deltaMass) throws IOException {
     super(srcFile,dstFile);
 
     this.recalDeltaMass =deltaMass;

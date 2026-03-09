@@ -61,7 +61,7 @@ public class MzDBMetrics {
         initReader();
 
       BufferedWriter writer = new BufferedWriter(new FileWriter(m_outputFile));
-      String[] columns = { "scan.id", "scan.rt", "master_scan.id", "master_scan.rt", "master_scan.peaks_count", "samecycle_scan.id", "samecycle_scan.rt", "samecycle_scan.peaks_count", "nearest_scan.id", "nearest_scan.rt", "nearest_scan.peaks_count"};
+      String[] columns = { "scan.id", "scan.rt", "master_scan.id", "master_scan.rt", "master_scan.peaks_count", "samecycle_scan.id", "samecycle_scan.rt", "samecycle_scan.peaks_count", "nearest_scan.id", "nearest_scan.rt", "nearest_scan.peaks_count", "header.moz", "header.charge"};
 
       writer.write(Arrays.stream(columns).collect(Collectors.joining(DELIMITER)));
       writer.newLine();
@@ -88,6 +88,9 @@ public class MzDBMetrics {
             strBuilder.append("NA").append(DELIMITER);
           }
         }
+
+        strBuilder.append(spHeader.getPrecursorMz()).append(DELIMITER);
+        strBuilder.append(spHeader.getPrecursorCharge()).append(DELIMITER);
 
         writer.write(strBuilder.toString());
         writer.newLine();
