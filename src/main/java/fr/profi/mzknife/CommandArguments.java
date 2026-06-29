@@ -26,6 +26,7 @@ public class CommandArguments {
   public final static String MATCH_IONS_COMMAND_NAME = "match_ions";
   public final static String MATCH_PSMS_COMMAND_NAME = "match_psms";
   public final static String QUANTIFY_PSMS_COMMAND_NAME = "quantify_psms";
+  public final static String PROTEIN_ROLLUP_COMMAND_NAME = "protein_rollup";
 
   @Parameters(commandNames =  {RECALIBRATE_COMMAND_NAME}, commandDescription = "Recalibrate mzDB file using delta mass. Recalibration will be applied only on specified scans range.", separators = "=")
   public static class MzDBRecalibrateCommand {
@@ -493,6 +494,25 @@ public class CommandArguments {
     public boolean writeMatchedPsms = false;
 
     @Parameter(names = {"-h", "--help"}, help = true)
+    public boolean help;
+  }
+
+  @Parameters(commandNames = {PROTEIN_ROLLUP_COMMAND_NAME}, commandDescription = "Rollup peptide or ion abundances into protein group abundances", separators = "=")
+  public static class ProteinRollupCommand {
+
+    @Parameter(names = {"-i", "--input_file"}, description = "input CSV file containing peptide or ion abundances", required = true, order = 0)
+    public String inputFile;
+
+    @Parameter(names = {"-cf", "--csv_config"}, description = "CSV format (columns and separator) configuration file", required = true, order = 1)
+    public String columnsConfig;
+
+    @Parameter(names = {"-o", "--output"}, description = "output result file name", required = true, order = 2)
+    public String outputFile;
+
+    @Parameter(names = {"-m", "--method"}, description = "abundance aggregation method (sum, mean, median, max, MRF)", required = true, order = 3)
+    public String aggregationMethod;
+
+     @Parameter(names = {"-h", "--help"}, help = true)
     public boolean help;
   }
 
