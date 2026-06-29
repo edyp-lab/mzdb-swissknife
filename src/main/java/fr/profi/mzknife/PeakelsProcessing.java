@@ -19,6 +19,9 @@ import fr.profi.mzknife.peakeldb.PeakelsDbFinder;
 import fr.profi.mzknife.peakeldb.PutativeFeatureWrapper;
 import fr.profi.mzknife.util.AbstractProcessing;
 import fr.profi.mzknife.util.LcMsRunSliceIteratorFilter;
+import fr.profi.mzknife.util.ReaderConfiguration;
+import fr.profi.mzknife.util.ReaderConfiguration.Column;
+import fr.profi.mzknife.util.ReaderConfiguration.ColumnMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
@@ -30,24 +33,6 @@ import java.util.stream.Collectors;
 public class PeakelsProcessing extends AbstractProcessing {
 
   private final static Logger LOG = LoggerFactory.getLogger(PeakelsProcessing.class);
-
-  public enum Column {ID, MOZ, CHARGE, RT, SEQ, PTMS, SCAN_NUMBER, TTOL, CV, RAWFILE}
-
-  public static class ColumnMapping {
-    private final Column column;
-    private int index;
-    private List<Integer> indexes = null;
-
-    public ColumnMapping(Column c) {
-      column = c;
-      index = c.ordinal();
-    }
-
-    public boolean isPresent() {
-      return this.index >= 0;
-    }
-
-  }
 
   public static class InputSource {
     private final List<PutativeFeatureWrapper> putativeFeatures;
@@ -72,54 +57,6 @@ public class PeakelsProcessing extends AbstractProcessing {
       return originalLines;
     }
   }
-
-
-
-  public static class ReaderConfiguration {
-
-    private static final CharSequence DEFAULT_SEPARATOR = ";";
-
-    private final Map<Column, ColumnMapping> columns;
-    private final CharSequence separator;
-
-    private ReaderConfiguration(Properties properties) {
-      this.columns = initializeColumns(properties);
-      this.separator = extractSeparator(properties);
-    }
-
-    /**
-     * Factory method creating configuration from a path to the .columns file.
-     */
-    public static ReaderConfiguration fromFile(String configurationFilePath) {
-      Properties properties = loadColumnProperties(configurationFilePath);
-      return new ReaderConfiguration(properties);
-    }
-
-    private static CharSequence extractSeparator(Properties properties) {
-      String value = properties.getProperty("SEPARATOR");
-      if (value == null || value.isEmpty()) {
-        return DEFAULT_SEPARATOR;
-      }
-      return value;
-    }
-
-    private static Properties loadColumnProperties(String configurationFilePath) {
-      Properties properties = new Properties();
-
-      if (configurationFilePath == null || configurationFilePath.isEmpty()) {
-        return properties;
-      }
-
-      try (FileInputStream fis = new FileInputStream(configurationFilePath)) {
-        properties.load(fis);
-      } catch (IOException ioe) {
-        LOG.error("Column properties cannot be read from {}", configurationFilePath, ioe);
-      }
-
-      return properties;
-    }
-  }
-
 
   /**
    * Search for putative ions in a peakeldb file.
@@ -192,6 +129,8 @@ public class PeakelsProcessing extends AbstractProcessing {
     final File outputPSMsFile = getDestFile(command.outputFile, "_matched_psms.csv", psmsFile);
     final File outputMissingIonsFile = getDestFile(command.outputFile, "_matched_ions.csv", psmsFile);
     final InputSource source = readPutativeFeatures(psmsFile, configuration);
+
+    LOG.info("Reading {} PSMs from {}", source.getPutativeFeatures().size(), psmsFile.getAbsolutePath());
 
     // force ion key update using the CV value if present
     source.getPutativeFeatures().forEach(pf -> pf.updateKeys(true));
@@ -322,7 +261,7 @@ public class PeakelsProcessing extends AbstractProcessing {
 
     ReaderConfiguration configuration = ReaderConfiguration.fromFile(command.columnsConfig);
 
-    // check configuration consistency : if grouping is requested, SEQ and PTMS columns must have been supplied
+    // check configuration consistency: if grouping is requested, SEQ and PTMS columns must have been supplied
     if (command.groupPsms && !(configuration.columns.get(Column.SEQ).isPresent() && configuration.columns.get(Column.PTMS).isPresent())) {
       LOG.error("To group PSMs the sequence and modifications columns must be provided");
       return;
@@ -408,7 +347,9 @@ public class PeakelsProcessing extends AbstractProcessing {
     final CSVParser parser = new CSVParserBuilder().withSeparator(configuration.separator.charAt(0)).build();
     CSVReader reader = new CSVReaderBuilder(new FileReader(file)).withCSVParser(parser).build();
     int lineCount = 0;
-    String header = String.join(String.valueOf(configuration.separator), reader.readNext());
+    String[] headerLine = reader.readNext();
+    configuration.updateNames(headerLine);
+    String header = String.join(String.valueOf(configuration.separator), headerLine);
     String[] split;
     while ((split = reader.readNext()) != null) {
 
@@ -482,44 +423,6 @@ public class PeakelsProcessing extends AbstractProcessing {
 
     return source;
   }
-
-  public static Map<Column, ColumnMapping> initializeColumns(Properties properties) {
-
-    Map<Column, ColumnMapping> columns = new HashMap<>() {{
-      put(Column.ID, new ColumnMapping(Column.ID));
-      put(Column.MOZ, new ColumnMapping(Column.MOZ));
-      put(Column.CHARGE, new ColumnMapping(Column.CHARGE));
-      put(Column.RT, new ColumnMapping(Column.RT));
-      put(Column.SCAN_NUMBER, new ColumnMapping(Column.SCAN_NUMBER));
-      put(Column.SEQ, new ColumnMapping(Column.SEQ));
-      put(Column.PTMS, new ColumnMapping(Column.PTMS));
-      put(Column.CV, new ColumnMapping(Column.CV));
-      put(Column.RAWFILE, new ColumnMapping(Column.RAWFILE));
-      put(Column.TTOL, new ColumnMapping(Column.TTOL));
-    }};
-
-    // initialize columns indexes by reading the configuration file (if supplied)
-
-        for (Column c : columns.keySet()) {
-          if (properties.containsKey(c.name())) {
-            String value = properties.getProperty(c.name());
-            if ((value != null) && !value.isEmpty()) {
-                final String[] split = value.split("\\+");
-                columns.get(c).index = Integer.parseInt(split[0].trim());
-                if (split.length > 1) {
-                  final List<Integer> list = List.of(split).stream().map( s -> Integer.valueOf(s.trim())).toList();
-                  columns.get(c).indexes = list;
-                }
-            } else {
-              columns.get(c).index = -1;
-            }
-          } else {
-            columns.get(c).index = -1;
-          }
-        }
-    return columns;
-  }
-
 
   private static Map<String, File> generatePeakelDb(MzDbReader mzDbReader, File mzdbFile, Float mzTol) throws SQLiteException {
 

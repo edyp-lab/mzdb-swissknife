@@ -8,129 +8,157 @@ import java.util.stream.Collectors;
 
 public class PutativeFeatureWrapper extends PutativeFeature {
 
-  public enum Type { PROVIDED, CROSS_ASSIGNED}
-  private Type type = Type.PROVIDED;
-  private String ionKey;
-  private String sequence;
-  private String modification;
-  private String rawSourceFile;
 
-  private Feature representativeExperimentalFt;
-  private List<Feature> experimentalFeatures = new ArrayList<>(5);
-  private List<PutativeFeatureWrapper> groupedFeatures = null;
-  private Optional<Boolean> isReliable = Optional.empty();
+   private Type type = Type.PROVIDED;
+   private String ionKey;
+   private String sequence;
+   private String modification;
+   private String rawSourceFile;
+   private int totalMatchedPeakelsCount;
+   private int reliableMatchedPeakelsCount;
+   private Feature representativeExperimentalFt;
+   private List<Feature> experimentalFeatures = new ArrayList<>(5);
+   private List<PutativeFeatureWrapper> groupedFeatures = null;
+   private Optional<Boolean> isReliable = Optional.empty();
+   private String peptideKey;
+   private String cvValue = null;
+   private Map<String, Object> properties = null;
+   private List<Integer> reliableMatchedPeakelIds;
 
-  private String peptideKey;
-  private String cvValue = null;
+   public PutativeFeatureWrapper(int id, double mz, int charge) {
+      super(id, mz, charge);
+   }
 
-  public PutativeFeatureWrapper(int id, double mz, int charge) {
-    super(id, mz, charge);
-  }
+   public int getReliableMatchedPeakelsCount() {
+      return reliableMatchedPeakelsCount;
+   }
 
-  public Type getType() {
-    return type;
-  }
+   public void setReliableMatchedPeakelsCount(int reliableMatchedPeakelsCount) {
+      this.reliableMatchedPeakelsCount = reliableMatchedPeakelsCount;
+   }
 
-  public void setType(Type type) {
-    this.type = type;
-  }
+   public int getTotalMatchedPeakelsCount() {
+      return totalMatchedPeakelsCount;
+   }
 
-  public String getSequence() {
-    return sequence;
-  }
+   public void setTotalMatchedPeakelsCount(int totalMatchedPeakelsCount) {
+      this.totalMatchedPeakelsCount = totalMatchedPeakelsCount;
+   }
 
-  public String getModification() {
-    return modification;
-  }
+   public Type getType() {
+      return type;
+   }
 
-  public String getIonKey() {
-    return ionKey;
-  }
+   public void setType(Type type) {
+      this.type = type;
+   }
 
-  public String getPeptideKey() {
-    return peptideKey;
-  }
+   public String getSequence() {
+      return sequence;
+   }
 
-  public List<Feature> getExperimentalFeatures() {
-    return experimentalFeatures;
-  }
+   public String getModification() {
+      return modification;
+   }
 
-  public void addExperimentalFeature(Feature feature) {
-    experimentalFeatures.add(feature);
-    if ((representativeExperimentalFt == null) || (feature.getBasePeakel().getApexIntensity() > representativeExperimentalFt.getBasePeakel().getApexIntensity())) {
-      representativeExperimentalFt = feature;
-    }
-  }
+   public String getIonKey() {
+      return ionKey;
+   }
 
-  public void setGroupedFeatures(List<PutativeFeatureWrapper> groupedFeatures) {
-    this.groupedFeatures = groupedFeatures;
-  }
+   public String getPeptideKey() {
+      return peptideKey;
+   }
 
-  public List<PutativeFeatureWrapper> getGroupedFeatures() {
-    return groupedFeatures;
-  }
+   public void addExperimentalFeature(Feature feature) {
+      experimentalFeatures.add(feature);
+      if ((representativeExperimentalFt == null) || (feature.getBasePeakel().getApexIntensity() > representativeExperimentalFt.getBasePeakel().getApexIntensity())) {
+         representativeExperimentalFt = feature;
+      }
+   }
 
-  public List<Integer> getGroupedPeakelIds() {
-    if (groupedFeatures == null)
-      return null;
-    return groupedFeatures.stream().flatMap(pf -> pf.getExperimentalFeatures().stream().flatMap(f -> Arrays.stream(f.getPeakels()).map(peakel -> peakel.getId()))).distinct().toList();
-  }
+   public List<PutativeFeatureWrapper> getGroupedFeatures() {
+      return groupedFeatures;
+   }
 
-  public Feature getRepresentativeExperimentalFeature() {
-    return representativeExperimentalFt;
-  }
+   public void setGroupedFeatures(List<PutativeFeatureWrapper> groupedFeatures) {
+      this.groupedFeatures = groupedFeatures;
+   }
 
-  public void setSequenceModifications(String sequence, String modification) {
-    this.sequence = sequence;
-    this.modification = modification;
-    updateKeys(false);
-  }
+   public List<Integer> getGroupedPeakelIds() {
+      if (groupedFeatures == null)
+         return null;
+      return groupedFeatures.stream().flatMap(pf -> pf.getExperimentalFeatures().stream().flatMap(f -> Arrays.stream(f.getPeakels()).map(peakel -> peakel.getId()))).distinct().toList();
+   }
 
-  /**
-   * Updates the `peptideKey` and `ionKey` fields of this instance based on the current sequence and modification (for
-   * `peptideKey`) and sequence, modification, charge, and optionally the `cvValue` field for `ionKey`.
-   *
-   * @param useCvValue a boolean flag that determines whether the `cvValue` field should be included in the `ionKey`.
-   */
-  public void updateKeys(boolean useCvValue) {
-    StringBuilder stb = new StringBuilder(this.sequence);
-    if (this.modification != null) {
-      stb.append('.').append(this.modification);
-    }
-    this.peptideKey = stb.toString();
-    stb.append('.').append(charge());
-    if (useCvValue && this.cvValue != null) {
-      stb.append('.').append(this.cvValue);
-    }
-    this.ionKey = stb.toString();
-  }
+   public List<Feature> getExperimentalFeatures() {
+      return experimentalFeatures;
+   }
 
-  public boolean isMatched() {
-    return experimentalFeatures != null && !experimentalFeatures.isEmpty();
-  }
+   public Feature getRepresentativeExperimentalFeature() {
+      return representativeExperimentalFt;
+   }
 
-  public Optional<Boolean> isReliable() {
-    return isReliable;
-  }
+   public void setSequenceModifications(String sequence, String modification) {
+      this.sequence = sequence;
+      this.modification = modification;
+      updateKeys(false);
+   }
 
-  public void setIsReliable(Boolean isReliable) {
-    this.isReliable = Optional.of(isReliable);
-  }
+   /**
+    * Updates the `peptideKey` and `ionKey` fields of this instance based on the current sequence and modification (for
+    * `peptideKey`) and sequence, modification, charge, and optionally the `cvValue` field for `ionKey`.
+    *
+    * @param useCvValue a boolean flag that determines whether the `cvValue` field should be included in the `ionKey`.
+    */
+   public void updateKeys(boolean useCvValue) {
+      StringBuilder stb = new StringBuilder(this.sequence);
+      if (this.modification != null) {
+         stb.append('.').append(this.modification);
+      }
+      this.peptideKey = stb.toString();
+      stb.append('.').append(charge());
+      if (useCvValue && this.cvValue != null) {
+         stb.append('.').append(this.cvValue);
+      }
+      this.ionKey = stb.toString();
+   }
 
-  public void setCvValue(String cvValue) {
-    this.cvValue = cvValue;
-  }
+   public boolean isMatched() {
+      return experimentalFeatures != null && !experimentalFeatures.isEmpty();
+   }
 
-  public String getCvValue() {
-    return cvValue;
-  }
+   public Optional<Boolean> isReliable() {
+      return isReliable;
+   }
 
-  public String getRawSourceFile() {
-    return rawSourceFile;
-  }
+   public void setIsReliable(Boolean isReliable) {
+      this.isReliable = Optional.of(isReliable);
+   }
 
-  public void setRawSourceFile(String rawSourceFile) {
-    this.rawSourceFile = rawSourceFile;
-  }
+   public String getCvValue() {
+      return cvValue;
+   }
+
+   public void setCvValue(String cvValue) {
+      this.cvValue = cvValue;
+   }
+
+   public String getRawSourceFile() {
+      return rawSourceFile;
+   }
+
+   public void setRawSourceFile(String rawSourceFile) {
+      this.rawSourceFile = rawSourceFile;
+   }
+
+   public void setReliableMatchedPeakelIds(List<Integer> reliableMatchedPeakelIds) {
+      this.reliableMatchedPeakelIds = reliableMatchedPeakelIds;
+   }
+
+   public List<Integer> getReliableMatchedPeakelIds() {
+      return reliableMatchedPeakelIds;
+   }
+
+   public enum Type {PROVIDED, CROSS_ASSIGNED}
 
 }

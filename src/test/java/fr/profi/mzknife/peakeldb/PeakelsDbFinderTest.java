@@ -9,6 +9,7 @@ import com.opencsv.exceptions.CsvValidationException;
 import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.model.Feature;
 import fr.profi.mzknife.PeakelsProcessing;
+import fr.profi.mzknife.util.ReaderConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -93,7 +94,7 @@ public class PeakelsDbFinderTest {
   public void testMatchIdentifiedPsmsWithRealData() throws Exception {
 
     // Read PSMs from CSV file using PeakelsProcessing utility
-    PeakelsProcessing.ReaderConfiguration configuration = PeakelsProcessing.ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
     PeakelsProcessing.InputSource source = PeakelsProcessing.readPutativeFeatures(psmsFile, configuration);
 
     assertNotNull("Input source should be loaded", source);
@@ -173,7 +174,7 @@ public class PeakelsDbFinderTest {
   public void testMatchIdentifiedPsmsWithGrouping() throws Exception {
 
     // Read PSMs from CSV file
-    PeakelsProcessing.ReaderConfiguration configuration = PeakelsProcessing.ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
     PeakelsProcessing.InputSource source = PeakelsProcessing.readPutativeFeatures(psmsFile, configuration);
 
     assertNotNull(source);
@@ -210,7 +211,7 @@ public class PeakelsDbFinderTest {
   public void testMatchPutativeFeaturesWithRealData() throws Exception {
 
     // Read putative features from CSV file
-    PeakelsProcessing.ReaderConfiguration configuration = PeakelsProcessing.ReaderConfiguration.fromFile(getClass().getResource(PFEATURES_COLUMNS_FILE).getFile());
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(getClass().getResource(PFEATURES_COLUMNS_FILE).getFile());
     PeakelsProcessing.InputSource source = PeakelsProcessing.readPutativeFeatures(putativeFtFile, configuration);
 
     assertNotNull("Input source should be loaded", source);
@@ -256,7 +257,7 @@ public class PeakelsDbFinderTest {
     }
 
     // Read PSMs from CSV file
-    PeakelsProcessing.ReaderConfiguration configuration = PeakelsProcessing.ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
     PeakelsProcessing.InputSource source = PeakelsProcessing.readPutativeFeatures(psmsFile, configuration);
 
     // Initialize MzDbReader
@@ -291,7 +292,7 @@ public class PeakelsDbFinderTest {
   public void testMzToleranceIsAppliedCorrectly() throws Exception {
 
     // Test with different m/z tolerances
-    PeakelsProcessing.ReaderConfiguration configuration = PeakelsProcessing.ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
+    ReaderConfiguration configuration = ReaderConfiguration.fromFile(getClass().getResource(PSMS_COLUMNS_FILE).getFile());
     PeakelsProcessing.InputSource source = PeakelsProcessing.readPutativeFeatures(psmsFile, configuration);
 
     MzDbReader mzDbReader = new MzDbReader(mzdbFile, true);
