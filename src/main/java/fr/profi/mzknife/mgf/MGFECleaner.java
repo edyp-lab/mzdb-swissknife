@@ -1,13 +1,17 @@
 package fr.profi.mzknife.mgf;
 
+import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.chemistry.model.BiomoleculeAtomTable$;
 import fr.profi.chemistry.model.MolecularConstants;
 import fr.profi.ms.model.MSMSSpectrum;
 import fr.profi.ms.model.TheoreticalIsotopePattern;
+import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.algo.DotProductPatternScorer;
 import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
+import fr.profi.mzdb.model.DataMode;
 import fr.profi.mzdb.model.SpectrumData;
+import fr.profi.mzdb.model.SpectrumHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
@@ -140,6 +144,18 @@ public class MGFECleaner extends MGFThreadedRewriter implements ISpectrumProcess
   // Not yet used since ECleanConfigTemplate has no parameter for now.
   public void setECleanParameters(ECleanConfigTemplate eCleanConfigTemplate) {
 
+  }
+
+  @Override
+  public boolean accept(MzDbReader mzDbReader) {
+    try {
+      SpectrumHeader firstMS2Spectrum = mzDbReader.getMs2SpectrumHeaders()[0];
+      DataMode mode = mzDbReader.getSpectrumDataEncoding(firstMS2Spectrum.getSpectrumId()).getMode();
+      return (mode == DataMode.FITTED) || (mode == DataMode.CENTROID);
+    } catch (SQLiteException e) {
+      LOG.error("Unable to read first MS1 spectrum encoding", e);
+    }
+    return false;
   }
 
   @Override

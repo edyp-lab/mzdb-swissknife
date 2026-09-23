@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class MzDbProcessing extends AbstractProcessing {
+
   private final static Logger LOG = LoggerFactory.getLogger(MzDbProcessing.class);
 
   private final static StandardToStringStyle style = new StandardToStringStyle();
@@ -191,7 +192,6 @@ public class MzDbProcessing extends AbstractProcessing {
     LOG.info("Creating MGF File for mzDB file " + mzDBCreateMgfCommand.mzdbFile);
     LOG.info("Precursor m/z values will be defined using the method: " + mzDBCreateMgfCommand.precMzComputation);
 
-
     MgfWriter writer;
 
     if (mzDBCreateMgfCommand.threads > 0) {
@@ -209,6 +209,11 @@ public class MzDbProcessing extends AbstractProcessing {
 
     // --- Define which PrecursorComputation method to use.
     IPrecursorComputation precursorComputation = createPrecursorComputation(mzDBCreateMgfCommand);
+
+    if (!precursorComputation.accept(mzDbReader) || !specProcessor.accept(mzDbReader)) {
+      LOG.error("Precursor computation and spectrum processor are not compatible with the mzDB file");
+      return;
+    }
 
     //Call writer to create mgf
     String s = ToStringBuilder.reflectionToString(mzDBCreateMgfCommand, style);

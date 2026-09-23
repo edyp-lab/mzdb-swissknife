@@ -100,3 +100,10 @@ run.bat peakels quantify_psms -d .\MSData -cf csms.columns -i identifiedPsms.csv
 `-g` is used to group PSMs of a single rawfile corresponding to the same peptide ion. 
 `-xa` is used to perform the cross assignment step. If not specified, the output contains the predicted missing features, but those are not quantified / cross-assigned
 `-wmp` is used to write the PSMs matching result file, before computing consensus ions and cross assignment. 
+
+# Release Notes
+
+## 1.3.0-SNAPSHOT
+
+**Create MGF command**
+- Check MS1/MS2 file format consistency with Precursor computation and spectrum processing methods

@@ -62,4 +62,9 @@ public class PrecursorComputerWrapper implements IPrecursorComputation {
   public CharSequence getDelimiter() {
     return DELIMITER;
   }
+
+  @Override
+  public boolean accept(MzDbReader mzDbReader) {
+    return wrappedPrecComputer.accept(mzDbReader);
+  }
 }

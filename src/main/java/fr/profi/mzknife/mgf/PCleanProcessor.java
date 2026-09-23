@@ -3,10 +3,14 @@ package fr.profi.mzknife.mgf;
 import Preprocessing.Config;
 import Preprocessing.JPeak;
 import Preprocessing.JSpectrum;
+import com.almworks.sqlite4java.SQLiteException;
 import fr.profi.ms.model.MSMSSpectrum;
+import fr.profi.mzdb.MzDbReader;
 import fr.profi.mzdb.io.writer.mgf.ISpectrumProcessor;
 import fr.profi.mzdb.io.writer.mgf.MgfPrecursor;
+import fr.profi.mzdb.model.DataMode;
 import fr.profi.mzdb.model.SpectrumData;
+import fr.profi.mzdb.model.SpectrumHeader;
 import fr.profi.util.ms.package$;
 
 import java.io.File;
@@ -71,6 +75,18 @@ public class PCleanProcessor extends MGFRewriter implements ISpectrumProcessor {
 
   public void setPCleanParameters(PCleanConfigTemplate template) {
     setPCleanParameters(template.getImonFilter(), template.getRepFilter(), template.getLabelFilter(), template.getLowWinFilter(), template.getHighWinFilter(), template.getIsoReduction(), template.getChargeDeconv(), template.getIonsMerge(), template.getLargerThanPrecursor());
+  }
+
+  @Override
+  public boolean accept(MzDbReader mzDbReader) {
+    try {
+      SpectrumHeader firstMS2Spectrum = mzDbReader.getMs2SpectrumHeaders()[0];
+      DataMode mode = mzDbReader.getSpectrumDataEncoding(firstMS2Spectrum.getSpectrumId()).getMode();
+      return (mode == DataMode.FITTED) || (mode == DataMode.CENTROID);
+    } catch (SQLiteException e) {
+      LOG.error("Unable to read first MS1 spectrum encoding", e);
+    }
+    return false;
   }
 
   protected MSMSSpectrum getSpectrum2Export(MSMSSpectrum inSpectrum){
