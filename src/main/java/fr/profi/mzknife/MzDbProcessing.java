@@ -202,6 +202,8 @@ public class MzDbProcessing extends AbstractProcessing {
     }
 
     MzDbReader mzDbReader = writer.getMzDbReader();
+    mzDbReader.enableScanListLoading();
+    mzDbReader.enablePrecursorListLoading();
 
     // --- Get and verify parameters for pClean (they should be consistent).
     // --- Define SpectrumProcessor to use and configure it
